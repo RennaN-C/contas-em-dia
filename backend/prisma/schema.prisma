@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum StatusConta {
+  PENDENTE
+  PAGA
+  ATRASADA
+}
+
+enum TipoConta {
+  AVULSA
+  RECORRENTE
+}
+
+model Usuario {
+  id           String     @id @default(uuid())
+  nome         String
+  email        String     @unique
+  senhaHash    String     @map("senha_hash")
+  contas       Conta[]
+  mensagens    Mensagem[]
+  criadoEm     DateTime   @default(now()) @map("criado_em")
+  atualizadoEm DateTime   @updatedAt @map("atualizado_em")
+
+  @@map("usuarios")
+}
+
+model Conta {
+  id           String      @id @default(uuid())
+  usuarioId    String      @map("usuario_id")
+  usuario      Usuario     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  descricao    String
+  valor        Decimal     @db.Decimal(12, 2)
+  vencimento   DateTime
+  tipo         TipoConta   @default(AVULSA)
+  recorrencia  String?
+  status       StatusConta @default(PENDENTE)
+  pagamentos   Pagamento[]
+  avisos       Aviso[]
+  criadoEm     DateTime    @default(now()) @map("criado_em")
+  atualizadoEm DateTime    @updatedAt @map("atualizado_em")
+
+  @@index([usuarioId, vencimento])
+  @@map("contas")
+}
+
+model Pagamento {
+  id       String   @id @default(uuid())
+  contaId  String   @map("conta_id")
+  conta    Conta    @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  valor    Decimal  @db.Decimal(12, 2)
+  pagoEm   DateTime @map("pago_em")
+  criadoEm DateTime @default(now()) @map("criado_em")
+
+  @@index([contaId])
+  @@map("pagamentos")
+}
+
+model Aviso {
+  id            String    @id @default(uuid())
+  contaId       String    @map("conta_id")
+  conta         Conta     @relation(fields: [contaId], references: [id], onDelete: Cascade)
+  diasAntes     Int       @map("dias_antes")
+  agendadoPara  DateTime  @map("agendado_para")
+  enviadoEm     DateTime? @map("enviado_em")
+  criadoEm      DateTime  @default(now()) @map("criado_em")
+
+  @@index([contaId, agendadoPara])
+  @@map("avisos")
+}
+
+model Mensagem {
+  id        String   @id @default(uuid())
+  usuarioId String   @map("usuario_id")
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  titulo    String
+  conteudo  String
+  lida      Boolean  @default(false)
+  criadoEm  DateTime @default(now()) @map("criado_em")
+
+  @@index([usuarioId, criadoEm])
+  @@map("mensagens")
+}
