@@ -6,6 +6,10 @@ export type RegisterErrors = Partial<Record<keyof RegisterInput, string>>;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const REGISTER_FIELDS: Array<keyof RegisterInput> = ["nome", "email", "senha"];
 
+export function isValidEmail(email: string): boolean {
+  return EMAIL_PATTERN.test(email);
+}
+
 export function validateRegisterForm(input: RegisterInput): RegisterErrors {
   const errors: RegisterErrors = {};
   const nome = input.nome.trim();
@@ -21,7 +25,7 @@ export function validateRegisterForm(input: RegisterInput): RegisterErrors {
 
   if (!email) {
     errors.email = "Informe seu e-mail";
-  } else if (!EMAIL_PATTERN.test(email)) {
+  } else if (!isValidEmail(email)) {
     errors.email = "E-mail inválido";
   }
 
