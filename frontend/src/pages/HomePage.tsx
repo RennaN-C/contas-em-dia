@@ -1,18 +1,14 @@
 import { useAuth } from "../features/auth/useAuth";
 
 export function HomePage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   return (
-    <main className="app-shell">
-      <section className="hero">
-        <span className="eyebrow">ContasEmDia</span>
-        <h1>Olá, {user?.nome}!</h1>
-        <p>As áreas do sistema serão adicionadas aqui.</p>
-        <button className="button" type="button" onClick={logout}>
-          Sair
-        </button>
-      </section>
-    </main>
+    <section className="page">
+      <h1 className="page-title">Olá, {user?.nome}!</h1>
+      <p className="page-description">
+        Acompanhe suas contas, pagamentos e avisos pelo menu.
+      </p>
+    </section>
   );
 }
