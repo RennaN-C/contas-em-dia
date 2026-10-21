@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { Link } from "react-router";
 import { ApiError } from "../../services/api";
 import { registerUser, type RegisterInput } from "./auth.service";
 import {
@@ -64,9 +65,9 @@ export function RegisterForm() {
       <div className="alert alert-success" role="status">
         <strong>Cadastro realizado!</strong>
         <p>Bem-vindo(a), {registeredName}. Agora você já pode entrar com seu e-mail e senha.</p>
-        <a className="button" href="/login">
+        <Link className="button" to="/login">
           Ir para o login
-        </a>
+        </Link>
       </div>
     );
   }

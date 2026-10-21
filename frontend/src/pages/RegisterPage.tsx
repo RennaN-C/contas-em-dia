@@ -1,3 +1,4 @@
+import { Link } from "react-router";
 import { RegisterForm } from "../features/auth/RegisterForm";
 
 export function RegisterPage() {
@@ -9,7 +10,7 @@ export function RegisterPage() {
         <p className="auth-subtitle">Organize suas contas e receba avisos antes do vencimento.</p>
         <RegisterForm />
         <p className="auth-footer">
-          Já tem conta? <a href="/login">Entrar</a>
+          Já tem conta? <Link to="/login">Entrar</Link>
         </p>
       </section>
     </main>
