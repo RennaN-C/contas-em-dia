@@ -1,0 +1,17 @@
+import { api } from "../../services/api";
+import type { User } from "../../types/user";
+
+export type RegisterInput = {
+  nome: string;
+  email: string;
+  senha: string;
+};
+
+export async function registerUser(input: RegisterInput): Promise<User> {
+  const { user } = await api<{ user: User }>("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+
+  return user;
+}

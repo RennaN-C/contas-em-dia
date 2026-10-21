@@ -49,3 +49,119 @@ p {
   max-width: 60ch;
   line-height: 1.65;
 }
+
+a {
+  color: #2454d6;
+}
+
+.auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem 1rem;
+}
+
+.auth-card {
+  width: min(420px, 100%);
+  padding: 2rem 1.5rem;
+  background: #ffffff;
+  border: 1px solid #e3e6ef;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(23, 32, 51, 0.06);
+}
+
+.auth-title {
+  margin: 0.5rem 0 0.25rem;
+  font-size: 1.75rem;
+  line-height: 1.2;
+}
+
+.auth-subtitle {
+  margin: 0 0 1.5rem;
+  color: #5a6478;
+}
+
+.auth-footer {
+  margin: 1.25rem 0 0;
+  text-align: center;
+}
+
+.form {
+  display: grid;
+  gap: 1rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.field label {
+  font-weight: 600;
+}
+
+.field input {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #c9cfdc;
+  border-radius: 8px;
+  background: #ffffff;
+  color: inherit;
+}
+
+.field input:focus {
+  outline: 2px solid #2454d6;
+  outline-offset: 1px;
+  border-color: #2454d6;
+}
+
+.field input[aria-invalid="true"] {
+  border-color: #c62828;
+}
+
+.field-error {
+  color: #c62828;
+  font-size: 0.875rem;
+}
+
+.field-hint {
+  color: #5a6478;
+  font-size: 0.875rem;
+}
+
+.button {
+  display: inline-block;
+  padding: 0.7rem 1rem;
+  border: 0;
+  border-radius: 8px;
+  background: #2454d6;
+  color: #ffffff;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.alert {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+}
+
+.alert p {
+  margin: 0.35rem 0 0.75rem;
+}
+
+.alert-error {
+  background: #fdecec;
+  color: #8e1c1c;
+}
+
+.alert-success {
+  background: #e8f5ec;
+  color: #1d5a32;
+}
