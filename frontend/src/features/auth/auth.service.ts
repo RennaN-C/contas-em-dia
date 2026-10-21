@@ -28,3 +28,9 @@ export function loginUser(input: LoginInput): Promise<Session> {
     body: JSON.stringify(input)
   });
 }
+
+export async function fetchCurrentUser(): Promise<User> {
+  const { user } = await api<{ user: User }>("/users/me");
+
+  return user;
+}

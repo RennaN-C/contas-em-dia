@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { loginUser, type LoginInput } from "./auth.service";
 import { loginErrorMessage, validateLoginForm, type LoginErrors } from "./login-validation";
-import { saveSession } from "./session";
+import { useAuth } from "./useAuth";
 
 const initialValues: LoginInput = { email: "", senha: "" };
 
@@ -13,6 +13,7 @@ type LoginLocationState = {
 export function LoginForm() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { login } = useAuth();
   const [values, setValues] = useState(initialValues);
   const [errors, setErrors] = useState<LoginErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -38,7 +39,7 @@ export function LoginForm() {
 
     try {
       const session = await loginUser({ email: values.email.trim(), senha: values.senha });
-      saveSession(session);
+      login(session);
 
       const from = (location.state as LoginLocationState | null)?.from;
       navigate(from ?? "/", { replace: true });
