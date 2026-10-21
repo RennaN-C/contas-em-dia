@@ -26,6 +26,8 @@ describe("authenticateUser", () => {
     const senhaHash = await bcrypt.hash("senha-segura", 4);
 
     const repository: UserRepository = {
+      findById: vi.fn(),
+      update: vi.fn(),
       findByEmail: vi.fn().mockResolvedValue(
         makeUser({
           senhaHash
@@ -52,6 +54,8 @@ describe("authenticateUser", () => {
 
   it("recusa usuário inexistente", async () => {
     const repository: UserRepository = {
+      findById: vi.fn(),
+      update: vi.fn(),
       findByEmail: vi.fn().mockResolvedValue(null),
       create: vi.fn()
     };
@@ -71,6 +75,8 @@ describe("authenticateUser", () => {
     const senhaHash = await bcrypt.hash("senha-correta", 4);
 
     const repository: UserRepository = {
+      findById: vi.fn(),
+      update: vi.fn(),
       findByEmail: vi.fn().mockResolvedValue(
         makeUser({
           senhaHash
