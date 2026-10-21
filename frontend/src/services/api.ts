@@ -16,6 +16,17 @@ export class ApiError extends Error {
   }
 }
 
+let authToken: string | null = null;
+let unauthorizedHandler: (() => void) | null = null;
+
+export function setAuthToken(token: string | null) {
+  authToken = token;
+}
+
+export function setUnauthorizedHandler(handler: (() => void) | null) {
+  unauthorizedHandler = handler;
+}
+
 async function readErrorBody(response: Response) {
   try {
     return (await response.json()) as { message?: string; issues?: ApiIssue[] };
@@ -32,11 +43,16 @@ export async function api<T>(path: string, options?: RequestInit): Promise<T> {
       ...options,
       headers: {
         "Content-Type": "application/json",
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         ...options?.headers
       }
     });
   } catch {
     throw new ApiError("Não foi possível conectar ao servidor", 0);
+  }
+
+  if (response.status === 401 && authToken) {
+    unauthorizedHandler?.();
   }
 
   if (!response.ok) {
