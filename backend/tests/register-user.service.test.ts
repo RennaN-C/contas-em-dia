@@ -26,6 +26,8 @@ describe("registerUser", () => {
     let createdData: { nome: string; email: string; senhaHash: string } | undefined;
 
     const repository: UserRepository = {
+      findById: vi.fn(),
+      update: vi.fn(),
       findByEmail: vi.fn().mockResolvedValue(null),
       create: vi.fn(async (data) => {
         createdData = data;
@@ -60,6 +62,8 @@ describe("registerUser", () => {
 
   it("recusa e-mail já cadastrado", async () => {
     const repository: UserRepository = {
+      findById: vi.fn(),
+      update: vi.fn(),
       findByEmail: vi.fn().mockResolvedValue(makeUser()),
       create: vi.fn()
     };

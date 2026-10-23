@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { ZodError } from "zod";
 import { env } from "../../config/env.js";
+import { validationError } from "../../lib/validation-error.js";
 import {
   EmailAlreadyInUseError,
   registerUser
@@ -12,16 +13,6 @@ import {
   InvalidCredentialsError
 } from "./login-user.service.js";
 import { createAccessToken } from "./token.service.js";
-
-function validationError(response: Response, error: ZodError) {
-  return response.status(400).json({
-    message: "Dados inválidos",
-    issues: error.issues.map((issue) => ({
-      path: issue.path.join("."),
-      message: issue.message
-    }))
-  });
-}
 
 export async function register(request: Request, response: Response) {
   try {

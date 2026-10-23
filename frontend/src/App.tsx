@@ -1,14 +1,31 @@
+import { Navigate, Route, Routes } from "react-router";
+import { AppLayout } from "./components/AppLayout";
+import { GuestRoute, ProtectedRoute } from "./features/auth/ProtectedRoute";
+import { AccountsPage } from "./pages/AccountsPage";
+import { HomePage } from "./pages/HomePage";
+import { LoginPage } from "./pages/LoginPage";
+import { NotificationsPage } from "./pages/NotificationsPage";
+import { PaymentsPage } from "./pages/PaymentsPage";
+import { ProfilePage } from "./pages/ProfilePage";
+import { RegisterPage } from "./pages/RegisterPage";
+
 export function App() {
   return (
-    <main className="app-shell">
-      <section className="hero">
-        <span className="eyebrow">ContasEmDia</span>
-        <h1>Suas contas no prazo, sem depender da memória.</h1>
-        <p>
-          Base inicial do projeto pronta. As funcionalidades serão adicionadas
-          por domínio em <code>src/features</code>.
-        </p>
-      </section>
-    </main>
+    <Routes>
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AppLayout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/contas" element={<AccountsPage />} />
+          <Route path="/pagamentos" element={<PaymentsPage />} />
+          <Route path="/avisos" element={<NotificationsPage />} />
+          <Route path="/perfil" element={<ProfilePage />} />
+        </Route>
+      </Route>
+      <Route element={<GuestRoute />}>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/cadastro" element={<RegisterPage />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
