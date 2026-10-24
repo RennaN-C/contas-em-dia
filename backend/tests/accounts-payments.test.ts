@@ -1,0 +1,52 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import express from 'express';
+import request from 'supertest';
+const {db}=vi.hoisted(()=>({db:{conta:{findMany:vi.fn(),findFirst:vi.fn(),create:vi.fn(),update:vi.fn(),delete:vi.fn(),upsert:vi.fn()},pagamento:{findUnique:vi.fn(),findMany:vi.fn(),create:vi.fn()},$queryRaw:vi.fn(),$transaction:vi.fn()}}));
+vi.mock('../src/lib/prisma.js',()=>({prisma:db}));
+vi.mock('../src/config/env.js',()=>({env:{JWT_SECRET:'secret-test-long-enough'}}));
+import { accountStatus, nextDue, mutateAccount } from '../src/modules/accounts/accounts.service.js';
+import { registerPayment, listPayments } from '../src/modules/payments/payments.service.js';
+import { accountSchema } from '../src/modules/accounts/accounts.schema.js';
+import { accountsRoutes } from '../src/modules/accounts/accounts.routes.js';
+import { paymentsRoutes } from '../src/modules/payments/payments.routes.js';
+import { createAccessToken } from '../src/modules/auth/token.service.js';
+const id='11111111-1111-4111-8111-111111111111',key='22222222-2222-4222-8222-222222222222';
+const input={descricao:'Aluguel',valor:100,vencimento:'2026-01-31',tipo:'RECORRENTE' as const,recorrencia:'MENSAL' as const};
+const row={...input,id,usuarioId:'owner',vencimento:new Date(input.vencimento),diaRecorrencia:31,origemId:null,pagamentos:[]};
+function app(){const a=express();a.use(express.json());a.use('/accounts',accountsRoutes);a.use('/payments',paymentsRoutes);return a;}
+const token=createAccessToken('owner','secret-test-long-enough');
+const auth={Authorization:`Bearer ${token}`};
+beforeEach(()=>{vi.resetAllMocks();db.$transaction.mockImplementation(fn=>fn(db));db.conta.findFirst.mockResolvedValue(row);db.conta.create.mockImplementation(({data})=>({...data,id,pagamentos:[]}));db.conta.update.mockImplementation(({data})=>({...row,...data}));});
+describe('datas, valores e status',()=>{
+ it.each([['2026-01-31',31,'2026-02-28'],['2024-01-31',31,'2024-02-29'],['2026-02-28',31,'2026-03-31'],['2026-12-31',31,'2027-01-31']])('avança %s preservando âncora', (d,day,next)=>expect(nextDue(new Date(d),day).toISOString().slice(0,10)).toBe(next));
+ it.each([['2026-02-30'],['2026-13-01'],['invalid']])('rejeita data %s',d=>expect(accountSchema.safeParse({...input,vencimento:d}).success).toBe(false));
+ it.each([0,-1,1.001,10000000000])('rejeita valor %s',valor=>expect(accountSchema.safeParse({...input,valor}).success).toBe(false));
+ it('não aceita proprietário no payload',()=>expect(accountSchema.safeParse({...input,usuarioId:'other'}).success).toBe(false));
+ it('exige recorrência mensal',()=>expect(accountSchema.safeParse({...input,recorrencia:null}).success).toBe(false));
+ it.each([[100,'PAGA'],[50,'ATRASADA'],[0,'ATRASADA']])('saldo pago %s', (valor,status)=>expect(accountStatus(100,new Date('2026-01-01'),[{valor}],new Date('2026-01-02'))).toBe(status));
+ it('vencimento hoje permanece pendente',()=>expect(accountStatus(100,new Date('2026-01-02'),[],new Date('2026-01-02T23:59:00Z'))).toBe('PENDENTE'));
+});
+describe('API protegida',()=>{
+ it.each(['get','post','put','delete'] as const)('%s exige JWT',async method=>{expect((await request(app())[method]('/accounts/'+(method==='post'?'':id))).status).toBe(401);});
+ it('cria vinculada ao token',async()=>{const r=await request(app()).post('/accounts').set(auth).send(input);expect(r.status).toBe(201);expect(db.conta.create.mock.calls[0]![0].data.usuarioId).toBe('owner');});
+ it('rejeita dados inválidos sem gravar',async()=>{expect((await request(app()).post('/accounts').set(auth).send({...input,valor:-1})).status).toBe(400);expect(db.conta.create).not.toHaveBeenCalled();});
+ it('lista ordenada e filtra status calculado',async()=>{db.conta.findMany.mockResolvedValue([row,{...row,id:key,pagamentos:[{valor:100}]}]);const r=await request(app()).get('/accounts?status=PAGA').set(auth);expect(r.body.accounts).toHaveLength(1);expect(r.body.accounts[0].id).toBe(key);expect(db.conta.findMany.mock.calls[0]![0]).toMatchObject({where:{usuarioId:'owner'},orderBy:[{vencimento:'asc'},{id:'asc'}]});});
+ it('consulta por id e proprietário',async()=>{expect((await request(app()).get(`/accounts/${id}`).set(auth)).status).toBe(200);expect(db.conta.findFirst).toHaveBeenCalledWith(expect.objectContaining({where:{id,usuarioId:'owner'}}));});
+ it.each(['get','put','delete'] as const)('%s conta inexistente ou alheia retorna 404',async method=>{db.conta.findFirst.mockResolvedValue(null);expect((await request(app())[method](`/accounts/${id}`).set(auth).send(input)).status).toBe(404);expect(db.conta.update).not.toHaveBeenCalled();expect(db.conta.delete).not.toHaveBeenCalled();});
+ it('edita conta sem pagamentos',async()=>{db.conta.findFirst.mockResolvedValueOnce(row).mockResolvedValueOnce(null);expect((await request(app()).put(`/accounts/${id}`).set(auth).send({...input,descricao:'Luz'})).status).toBe(200);});
+ it('exclui conta sem relacionamentos de série',async()=>{db.conta.findFirst.mockResolvedValueOnce(row).mockResolvedValueOnce(null);expect((await request(app()).delete(`/accounts/${id}`).set(auth)).status).toBe(200);expect(db.conta.delete).toHaveBeenCalledWith({where:{id}});});
+ it('preserva conta com pagamentos',async()=>{db.conta.findFirst.mockResolvedValue({...row,pagamentos:[{valor:10}]});expect((await request(app()).delete(`/accounts/${id}`).set(auth)).status).toBe(409);});
+ it('não reduz valor abaixo do pago',async()=>{db.conta.findFirst.mockResolvedValue({...row,pagamentos:[{valor:60}]});await expect(mutateAccount('owner',id,{...input,valor:50})).rejects.toThrow('inferior');});
+});
+describe('pagamentos atômicos',()=>{
+ const pay={valor:40,pagoEm:'2026-01-01',chave:key};
+ beforeEach(()=>{db.pagamento.create.mockImplementation(({data})=>({...data,id:key,pagoEm:new Date(data.pagoEm)}));});
+ it('parcial não quita nem gera próxima conta',async()=>{await registerPayment('owner',id,pay);expect(db.conta.update).toHaveBeenCalledWith({where:{id},data:{status:'ATRASADA'}});expect(db.conta.upsert).not.toHaveBeenCalled();});
+ it('quitação gera exatamente o mês seguinte',async()=>{await registerPayment('owner',id,{...pay,valor:100});expect(db.conta.upsert).toHaveBeenCalledWith(expect.objectContaining({where:{origemId:id},create:expect.objectContaining({vencimento:new Date('2026-02-28'),diaRecorrencia:31})}));});
+ it('repetição da chave retorna pagamento sem duplicar',async()=>{const existing={...pay,contaId:id,pagoEm:new Date(pay.pagoEm)};db.pagamento.findUnique.mockResolvedValue(existing);expect(await registerPayment('owner',id,pay)).toEqual(existing);expect(db.pagamento.create).not.toHaveBeenCalled();expect(db.conta.upsert).not.toHaveBeenCalled();});
+ it('rejeita chave com payload diferente',async()=>{db.pagamento.findUnique.mockResolvedValue({...pay,valor:1,contaId:id,pagoEm:new Date(pay.pagoEm)});await expect(registerPayment('owner',id,pay)).rejects.toThrow('idempotência');});
+ it('não permite sobrepagamento',async()=>{db.conta.findFirst.mockResolvedValue({...row,pagamentos:[{valor:70}]});await expect(registerPayment('owner',id,pay)).rejects.toThrow('excede');expect(db.pagamento.create).not.toHaveBeenCalled();});
+ it('não paga conta alheia',async()=>{db.conta.findFirst.mockResolvedValue(null);expect((await request(app()).post(`/accounts/${id}/payments`).set(auth).send(pay)).status).toBe(404);expect(db.pagamento.create).not.toHaveBeenCalled();});
+ it('rejeita pagamento futuro',async()=>{expect((await request(app()).post(`/accounts/${id}/payments`).set(auth).send({...pay,pagoEm:'2099-01-01'})).status).toBe(400);});
+ it('histórico filtra usuário e conta e ordena por data',async()=>{db.pagamento.findMany.mockResolvedValue([]);await listPayments('owner',id);expect(db.pagamento.findMany).toHaveBeenCalledWith(expect.objectContaining({where:{conta:{usuarioId:'owner'},contaId:id},orderBy:[{pagoEm:'desc'},{criadoEm:'desc'},{id:'asc'}]}));});
+});
