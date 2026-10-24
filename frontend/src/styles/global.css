@@ -318,3 +318,11 @@ a {
     padding: 1.25rem 1rem;
   }
 }
+
+.finance-list { list-style: none; padding: 0; display: grid; gap: 1rem; }
+.finance-card { background: white; border: 1px solid #d9deea; border-radius: 12px; padding: 1rem; margin-block: 1rem; overflow-wrap: anywhere; }
+.finance-actions { display: flex; flex-wrap: wrap; align-items: end; gap: .75rem; }
+.finance-card input, .finance-card select { width: 100%; padding: .6rem; }
+.finance-actions button, .finance-card button { min-height: 44px; padding: .5rem .8rem; cursor: pointer; }
+.finance-actions select { display: block; min-height: 44px; }
+.finance-card h2 { font-size: 1.2rem; }
