@@ -99,14 +99,18 @@ Em `frontend/`: `npm test`, `npm run build`, `npm run dev`.
 O TypeScript do Vite usa `noEmit` para compatibilidade com
 `allowImportingTsExtensions`. Contas e pagamentos estão disponíveis na navegação
 existente, com filtros, confirmação de exclusão, validações e estados de rede.
-Os testes de serviços usam Prisma simulado; a validação transacional completa
-contra PostgreSQL deve ser executada com o cliente Prisma gerado.
+Os testes de serviços usam Prisma simulado. A suíte integrada usa PostgreSQL real,
+limpa somente os usuários/contas que ela própria criou e requer banco de testes
+separado, já migrado:
 
-### Resultado nesta sessão
+```sh
+RUN_DATABASE_TESTS=1 DATABASE_URL="postgresql://USUARIO:SENHA@localhost:5432/BANCO_TESTE?schema=public" npm test
+```
 
-Download verificado do Prisma bloqueado pela política de rede em
-`binaries.prisma.sh`; isso impede geração do cliente, validação completa do
-backend e testes integrados com Prisma. API do GitHub em `api.github.com` também
-bloqueada. Os dois domínios foram solicitados no rascunho de configuração do
-ambiente; salvar o rascunho não aplica a política à máquina atual. Não há merge
-nem deploy autorizado. Consulte o relatório da PR para os checks executados.
+Sem `RUN_DATABASE_TESTS=1`, os testes integrados são explicitamente ignorados.
+As migrações foram aplicadas com `prisma migrate deploy` num banco isolado; a
+suíte integrada verifica autorização, CRUD, pagamentos parciais, recorrência,
+idempotência, relacionamentos e concorrência. Geração do cliente, builds e
+validações completas foram executadas nesta sessão. Downloads exigem acesso a
+`binaries.prisma.sh`; operações da PR usam `api.github.com`. Nenhum merge ou
+deploy foi realizado.

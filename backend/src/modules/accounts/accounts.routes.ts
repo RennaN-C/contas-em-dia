@@ -12,7 +12,7 @@ export const handle = (fn:(r:Request,s:Response)=>Promise<unknown>) => async(r:R
  try { await fn(r,s); } catch(e) {
   if(e instanceof ZodError) { validationError(s,e); return; }
   if(e instanceof AccountError) {s.status(e.status).json({message:e.message});return;}
-  if(e && typeof e==='object' && 'code' in e && (e.code==='P2034'||e.code==='P2002')) {s.status(409).json({message:'Operação concorrente; atualize e tente novamente com a mesma chave'});return;}
+  if(e && typeof e==='object' && 'code' in e && (e.code==='P2034'||e.code==='P2002'||(e.code==='P2010' && ['40001','40P01'].includes(String((e as {meta?:{code?:unknown}}).meta?.code))))) {s.status(409).json({message:'Operação concorrente; atualize e tente novamente com a mesma chave'});return;}
   console.error(e); s.status(500).json({message:'Erro interno do servidor'});
  }
 };
