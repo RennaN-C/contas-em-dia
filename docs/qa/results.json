@@ -1,0 +1,167 @@
+{
+  "startedAt": "2026-10-25T20:05:53.321Z",
+  "browser": "Google Chrome",
+  "isolated": true,
+  "steps": [
+    {
+      "name": "Acessibilidade automática: cadastro desktop",
+      "status": "passed",
+      "rulesPassed": 21
+    },
+    {
+      "name": "Cadastro real pelo formulário",
+      "status": "passed"
+    },
+    {
+      "name": "Login JWT e dashboard vazio",
+      "status": "passed"
+    },
+    {
+      "name": "Cadastro de conta atrasada e conta a vencer pela interface",
+      "status": "passed"
+    },
+    {
+      "name": "Busca de contas e estado vazio",
+      "status": "passed"
+    },
+    {
+      "name": "Acessibilidade automática: contas desktop",
+      "status": "passed",
+      "rulesPassed": 22
+    },
+    {
+      "name": "Jobs reais de aviso e resumo, com reexecução idempotente",
+      "status": "passed"
+    },
+    {
+      "name": "Aviso único, mensagem marcada como lida e persistência após reload",
+      "status": "passed"
+    },
+    {
+      "name": "Pagamento parcial real: R$ 100 − R$ 40 = R$ 60 pendentes",
+      "status": "passed"
+    },
+    {
+      "name": "Histórico de pagamento visível",
+      "status": "passed"
+    },
+    {
+      "name": "Consulta direta ao endpoint real da BrasilAPI registrada",
+      "status": "passed",
+      "httpStatus": 500,
+      "body": "{\"message\":\"Parse error\",\"type\":\"internal_error\",\"name\":\"Error\"}"
+    },
+    {
+      "name": "BrasilAPI real indisponível: interface mantém saldo/dias sem inventar taxa",
+      "status": "passed"
+    },
+    {
+      "name": "Resumo semanal real inclui somente conta elegível",
+      "status": "passed"
+    },
+    {
+      "name": "Acessibilidade automática: avisos desktop",
+      "status": "passed",
+      "rulesPassed": 25
+    },
+    {
+      "name": "Cenário controlado no Chrome: resposta simulada com 15% a.a., juros R$ 0,74 e total R$ 60,74",
+      "status": "passed"
+    },
+    {
+      "name": "Acessibilidade automática: pagamentos desktop",
+      "status": "passed",
+      "rulesPassed": 19
+    },
+    {
+      "name": "Acessibilidade automática: perfil desktop",
+      "status": "passed",
+      "rulesPassed": 21
+    },
+    {
+      "name": "Navegação por pagamentos e perfil com dados reais",
+      "status": "passed"
+    },
+    {
+      "name": "Dashboard e gráficos reais: R$ 180 pendentes e R$ 40 pagos, tabela acessível",
+      "status": "passed"
+    },
+    {
+      "name": "Acessibilidade automática: dashboard desktop",
+      "status": "passed",
+      "rulesPassed": 28
+    },
+    {
+      "name": "Acessibilidade automática: avisos mobile 390px",
+      "status": "passed",
+      "rulesPassed": 25
+    },
+    {
+      "name": "Acessibilidade automática: dashboard mobile 390px",
+      "status": "passed",
+      "rulesPassed": 26
+    },
+    {
+      "name": "Responsividade: menu funcional, sem overflow em 1440px, 390px e 320px",
+      "status": "passed"
+    },
+    {
+      "name": "Logout remove sessão e protege rota de avisos",
+      "status": "passed"
+    },
+    {
+      "name": "Nenhum erro JavaScript no navegador",
+      "status": "passed"
+    }
+  ],
+  "accessibility": [
+    {
+      "page": "cadastro desktop",
+      "violations": []
+    },
+    {
+      "page": "contas desktop",
+      "violations": []
+    },
+    {
+      "page": "avisos desktop",
+      "violations": []
+    },
+    {
+      "page": "pagamentos desktop",
+      "violations": []
+    },
+    {
+      "page": "perfil desktop",
+      "violations": []
+    },
+    {
+      "page": "dashboard desktop",
+      "violations": []
+    },
+    {
+      "page": "avisos mobile 390px",
+      "violations": []
+    },
+    {
+      "page": "dashboard mobile 390px",
+      "violations": []
+    }
+  ],
+  "errors": [],
+  "screenshots": [
+    "saldo-plus-cadastro.png",
+    "saldo-plus-contas.png",
+    "saldo-plus-avisos.png",
+    "saldo-plus-dashboard.png",
+    "saldo-plus-mobile-avisos.png",
+    "saldo-plus-mobile-dashboard.png"
+  ],
+  "brasilApi": {
+    "httpStatus": 500,
+    "body": "{\"message\":\"Parse error\",\"type\":\"internal_error\",\"name\":\"Error\"}"
+  },
+  "realSelic": "indisponivel",
+  "status": "passed",
+  "finishedAt": "2026-10-25T20:06:06.474Z"
+}

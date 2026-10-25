@@ -28,6 +28,7 @@ const app = express(); app.use(express.json()); app.use('/api/messages', message
 beforeEach(() => {
   vi.resetAllMocks();
   db.$transaction.mockImplementation(fn => fn(db));
+  db.$queryRaw.mockResolvedValue([{ id: 'owner' }]);
   db.conta.findMany.mockResolvedValue([account]); db.conta.findUnique.mockResolvedValue(account);
   db.aviso.findUniqueOrThrow.mockResolvedValue({ id: 'aviso', enviadoEm: null });
   db.usuario.findMany.mockResolvedValue([{ id: 'owner' }]);
@@ -85,6 +86,11 @@ describe('avisos atômicos', () => {
   });
 });
 describe('resumo semanal', () => {
+  it('ignora usuário removido antes da obtenção do lock', async () => {
+    db.$queryRaw.mockResolvedValueOnce([]);
+    await expect(processWeeklySummaries(now)).resolves.toBeUndefined();
+    expect(db.mensagem.createMany).not.toHaveBeenCalled();
+  });
   it('usa sete datas civis e saldo pendente', async () => {
     db.conta.findMany.mockResolvedValue([{ ...account, pagamentos: [{ valor: 30 }] }, { ...account, id: 'paid', pagamentos: [{ valor: 100 }] }]);
     const r = await weeklySummary('owner', now);

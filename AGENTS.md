@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Este arquivo é a referência curta para pessoas e IAs que desenvolverem o ContasEmDia.
+Este arquivo é a referência curta para pessoas e IAs que desenvolverem o Saldo +.
 
 ## Objetivo
 Controlar contas recorrentes e avulsas, pagamentos e vencimentos. O sistema deverá gerar avisos 3 dias antes, na véspera e no dia do vencimento, além de resumo semanal e estimativa de juros de atraso com dados da BrasilAPI.

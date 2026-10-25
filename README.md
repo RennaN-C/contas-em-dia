@@ -1,6 +1,15 @@
-# ContasEmDia
+# Saldo +
 
 Sistema de finanças pessoais para cadastro de contas recorrentes e avulsas, controle de vencimentos, pagamentos, avisos automáticos e estimativa de juros de atraso com integração à BrasilAPI.
+
+O **Saldo +** inclui painel com indicadores financeiros, gráficos dos últimos
+seis meses, distribuição de pagamentos e saldos, contas a acompanhar e central
+de avisos. Gráficos usam dados reais da API e oferecem tabela de valores;
+animações respeitam a preferência de movimento reduzido. A identidade visual
+foi atualizada sem alterar a stack ou invalidar as sessões existentes.
+
+Consulte o [relatório de validação como usuário](docs/relatorio-validacao-saldo-plus.md)
+para resultados, screenshots desktop/mobile e reprodução do fluxo no Chrome.
 
 ## Stack
 

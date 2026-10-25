@@ -32,7 +32,8 @@ export async function processWeeklySummaries(now = new Date()) {
   for (const user of users) {
     try {
       await transaction(async tx => {
-        await tx.$queryRaw`SELECT id FROM usuarios WHERE id = ${user.id} FOR UPDATE`;
+        const lockedUsers = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM usuarios WHERE id = ${user.id} FOR UPDATE`;
+        if (!lockedUsers.length) return; // User may have been deleted after the initial snapshot.
         await tx.$queryRaw`SELECT id FROM contas WHERE usuario_id = ${user.id} ORDER BY id FOR UPDATE`;
         const summary = await weeklySummary(user.id, now, tx);
         const money = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
