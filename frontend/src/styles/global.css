@@ -326,3 +326,10 @@ a {
 .finance-actions button, .finance-card button { min-height: 44px; padding: .5rem .8rem; cursor: pointer; }
 .finance-actions select { display: block; min-height: 44px; }
 .finance-card h2 { font-size: 1.2rem; }
+.message-unread { border-left: 4px solid #2454d6; }
+.message-state { color: #38465d; font-size: .875rem; font-weight: 600; }
+.message-content { white-space: pre-line; }
+.notifications-page button { min-height: 44px; cursor: pointer; padding: .5rem .8rem; }
+.notifications-page button:disabled { cursor: wait; opacity: .65; }
+.notifications-page :is(button, select, a):focus-visible { outline: 3px solid #2454d6; outline-offset: 3px; }
+.notifications-page ul { overflow-wrap: anywhere; }

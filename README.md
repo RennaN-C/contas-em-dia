@@ -70,7 +70,7 @@ não podem ser editadas. Contas com pagamentos não são excluídas, preservando
 histórico. Exclusão de avulsas sem pagamentos utiliza as relações já existentes
 para remover avisos associados. Transações serializáveis e bloqueio de linha
 serializam pagamentos/edições/exclusões; conflito concorrente retorna 409 e pode
-ser repetido com a **mesma chave**. Nenhum módulo de jobs/avisos foi alterado.
+ser repetido com a **mesma chave**.
 
 ### Instalação, banco e validação
 
@@ -114,3 +114,140 @@ idempotência, relacionamentos e concorrência. Geração do cliente, builds e
 validações completas foram executadas nesta sessão. Downloads exigem acesso a
 `binaries.prisma.sh`; operações da PR usam `api.github.com`. Nenhum merge ou
 deploy foi realizado.
+
+## Avisos, mensagens e BrasilAPI (Rennan — #22–#32)
+
+A central `/avisos` usa o layout autenticado e o cliente HTTP existentes. Exibe
+mensagens lidas/não lidas, avisos com referência à conta, resumos semanais
+persistidos, a previsão atual dos próximos sete dias e juros demonstrativos.
+Consultas independentes têm loading, vazio, erro e nova tentativa; falha na
+consulta da Selic mantém as mensagens e o resumo disponíveis.
+
+### Endpoints autenticados
+
+Todas as rotas exigem o JWT existente. O usuário vem exclusivamente do token.
+Não existem endpoints HTTP para disparar jobs ou criar mensagens arbitrárias.
+
+| Método | Rota | Resposta |
+| --- | --- | --- |
+| GET | `/api/notifications` | `{ notifications }`, avisos das contas do usuário, data decrescente |
+| GET | `/api/messages` | `{ messages }`, criação decrescente; inclui `conta` quando aplicável |
+| PATCH | `/api/messages/:id/read` | `{ message }`, persiste `lida: true`; repetir é seguro |
+| GET | `/api/notifications/weekly-summary` | `{ summary: { inicio, fimExclusivo, accounts, total } }` |
+| GET | `/api/notifications/interest-estimates` | `{ aviso, estimates }`, apenas contas atrasadas com saldo |
+
+Leitura de mensagem alheia ou inexistente retorna 404; UUID inválido retorna 400.
+Mensagens contêm `tipo` (`AVISO` ou `RESUMO_SEMANAL`), `titulo`, `conteudo`,
+`criadoEm`, `lida`, `contaId` e a referência `conta`. Registros anteriores à
+migração continuam disponíveis. Excluir conta preserva mensagens com a
+referência nula, enquanto os avisos seguem a exclusão em cascata existente.
+
+### Datas, agendamentos e recuperação
+
+O cron inicia somente em `src/server.ts`, após a API começar a escutar, e fica
+desativado em testes (`NODE_ENV=test` ou `VITEST`). Importar `app.ts` não agenda
+tarefas. Execute `npm run dev` ou `npm run build` seguido de `npm start` no backend.
+
+| Job | Expressão node-cron | Timezone | Horário em America/Sao_Paulo (UTC−3) |
+| --- | --- | --- | --- |
+| Avisos diários | `0 9 * * *` | `UTC` | Todos os dias, 06:00 |
+| Resumo semanal | `5 9 * * 1` | `UTC` | Segunda-feira, 06:05 |
+
+Regras usam datas civis **UTC**, como contas/pagamentos: avisos nos dias D−3,
+D−1 e D, sem depender do timezone do host. Dia inteiro do vencimento não conta
+como atraso. Resumo consulta `[hoje UTC, hoje UTC + 7 dias)`, incluindo hoje e
+mais seis datas; exclui contas integralmente pagas. Exibe saldo pendente,
+descrição e vencimento de cada conta. A semana da chave de idempotência começa
+na segunda-feira UTC; uma reexecução na mesma semana preserva o primeiro resumo.
+Uma mensagem vazia informa quando não há contas elegíveis.
+
+Saldo é calculado dos pagamentos, reutilizando as funções de contas, sem confiar
+em `status` persistido. Cada aviso e sua mensagem são gravados na mesma transação.
+O índice único `(conta_id, tipo, agendado_para)` e `mensagens.chave` única,
+com inserções `skipDuplicates`, impedem duplicidade entre processos. Locks de
+conta coordenam com pagamentos/edições existentes, e o job relê os pagamentos
+depois do lock. Resumos também bloqueiam o usuário e suas contas em ordem estável.
+Transações repetem até três tentativas em conflito transitório/deadlock.
+`noOverlap` impede sobreposição no processo; restrições do PostgreSQL cobrem
+múltiplas instâncias. Falhas individuais não impedem o processamento dos demais
+itens; são agregadas e registradas sem encerrar a API.
+
+O node-cron precisa do processo ativo e não recupera automaticamente horários
+perdidos. Para recuperar ou repetir uma execução, use no backend (com `.env`
+configurado) os comandos abaixo; omitir a data usa o dia UTC atual:
+
+```sh
+npm run job:daily -- 2026-10-25
+npm run job:weekly -- 2026-10-26
+```
+
+Repetir a mesma data não duplica mensagens. O comando encerra com código 1 se
+houver falha, permitindo uma nova tentativa operacional. Não altera recorrência
+nem cria competências futuras: isso continua sendo responsabilidade da quitação.
+
+### Selic e fórmula demonstrativa
+
+Somente o backend consulta
+[`GET https://brasilapi.com.br/api/taxas/v1/Selic`](https://brasilapi.com.br/docs#tag/Taxas),
+em cliente isolado. O contrato validado por Zod é `{ nome: "Selic", valor: number }`,
+com taxa finita e não negativa. Timeout de 5 segundos cobre conexão e leitura
+do JSON; HTTP não OK, JSON/contrato inválido, timeout e erro de rede retornam
+`status: "indisponivel"`. Nesse estado, cada estimativa mantém saldo e dias,
+mas **omite taxa, juros e total**, sem inventar uma taxa alternativa.
+Consulta uma vez por requisição de estimativas e somente se houver atraso.
+
+```text
+saldo = max(0, valor da conta − soma dos pagamentos)
+dias = max(0, data civil UTC atual − data civil UTC de vencimento)
+juros = arredondar_centavos(saldo × (Selic anual / 100) × dias / 365)
+valorEstimado = saldo + juros
+```
+
+São juros **simples**, com a Selic anual atual aplicada proporcionalmente a dias
+corridos, base fixa de 365 dias inclusive em ano bissexto. O cálculo utiliza
+`Prisma.Decimal` e arredondamento monetário `ROUND_HALF_UP`; saldos/pagamentos
+mantêm a precisão em centavos do módulo existente. Exemplo com **taxa fictícia de
+teste**: conta de R$ 100,00, R$ 40,00 pagos, 30 dias e 15% a.a. gera R$ 0,74
+de juros e R$ 60,74 estimados. Não calcula juros sobre valores já pagos;
+quitadas ou sem atraso não aparecem na lista e não recebem juros.
+
+**É uma estimativa demonstrativa, não cobrança contratual.** Não considera
+histórico diário da Selic, multas, taxas contratadas ou períodos anteriores aos
+pagamentos. O cálculo não grava juros nem altera contas, valores ou pagamentos.
+
+### Migração e testes
+
+Aplicar `npx prisma generate` e `npx prisma migrate deploy` no backend.
+`20261025010000_avisos_mensagens` adiciona tipo/índice único aos avisos e
+tipo/chave/referência opcional às mensagens. Nenhuma tabela/coluna é removida.
+Avisos legados recebem tipo conforme os dias; eventuais duplicatas históricas
+são preservadas com tipo `LEGADO_<id>` para permitir o novo índice sem perda.
+Novas mensagens de avisos usam `aviso:<id>`; resumos usam
+`semana:<usuarioId>:<segunda-feira UTC>` como chave única.
+
+Os testes de BrasilAPI usam mocks, nunca a rede real. As suítes cobrem 3/1/0
+dias, limites UTC/ano bissexto, status desatualizado, pagamentos parciais,
+autorização, idempotência, concorrência, rollback, recuperação, resumos,
+juros e indisponibilidade/timeout/contrato inválido. A suíte frontend cobre
+consultas, filtros, leitura, feedback, retries e falhas independentes.
+
+Para PostgreSQL isolado no PowerShell, sem tocar no banco de desenvolvimento:
+
+```powershell
+docker run --name contas-rennan-tests -e POSTGRES_USER=teste -e POSTGRES_PASSWORD=teste_local -e POSTGRES_DB=contas_rennan_test -p 55432:5432 -d postgres:15-alpine
+cd backend
+$env:DATABASE_URL='postgresql://teste:teste_local@localhost:55432/contas_rennan_test'
+$env:JWT_SECRET='chave-exclusiva-para-testes-locais'
+$env:RUN_DATABASE_TESTS='1'
+npx prisma generate
+npx prisma migrate deploy
+npm run build
+npm test
+cd ../frontend
+npm run build
+npm test
+```
+
+As variáveis desses comandos são somente para teste. As suítes integradas
+removem apenas seus próprios usuários e registros, e não devem rodar no banco
+de desenvolvimento/produção. Não dependem da disponibilidade da BrasilAPI.
