@@ -1,5 +1,5 @@
 {
-  "startedAt": "2026-10-25T21:02:44.849Z",
+  "startedAt": "2026-10-25T21:10:52.899Z",
   "browser": "Google Chrome",
   "isolated": true,
   "steps": [
@@ -195,5 +195,5 @@
   "rateSource": "Banco Central · SGS 432",
   "rateCached": true,
   "status": "passed",
-  "finishedAt": "2026-10-25T21:02:58.014Z"
+  "finishedAt": "2026-10-25T21:11:06.768Z"
 }

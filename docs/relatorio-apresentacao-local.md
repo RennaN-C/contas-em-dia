@@ -13,8 +13,9 @@ Escopo de hospedagem confirmado pelo usuário: **apresentação local**.
 - `npm audit`: **zero vulnerabilidades** nos dois pacotes na revisão executada.
 - Conta demonstrativa preparada em banco local separado do QA; login e telas
   também verificados no Chrome em `http://localhost:5174`.
-- Configuração de CI incluída para repetir testes, builds, auditoria e migrações
-  em PostgreSQL descartável no GitHub Actions; resultados remotos constam da PR.
+- CI executada e aprovada também no GitHub Actions, com instalação limpa,
+  PostgreSQL descartável, testes, builds e auditoria: [execução do código 5b1308e](https://github.com/RennaN-C/contas-em-dia/actions/runs/40234196654).
+  Resultados dos commits posteriores de evidências constam da PR #36.
 
 Os números não incluem testes compilados em `dist/`: o runner passou a selecionar
 explicitamente `tests/**/*.test.ts`, evitando dupla execução/contagem.
