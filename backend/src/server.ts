@@ -1,6 +1,8 @@
 import { app } from "./app.js";
 import { env } from "./config/env.js";
+import { startSchedules } from './jobs/schedules.js';
 
 app.listen(env.PORT, () => {
-  console.log(`ContasEmDia API executando na porta ${env.PORT}`);
+  startSchedules();
+  console.log(`Saldo + API executando na porta ${env.PORT}`);
 });

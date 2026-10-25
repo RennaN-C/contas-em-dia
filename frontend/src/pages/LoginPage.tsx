@@ -1,11 +1,14 @@
 import { Link } from "react-router";
 import { LoginForm } from "../features/auth/LoginForm";
+import { Brand } from '../components/Icon';
+import { AuthStory } from '../components/AuthStory';
 
 export function LoginPage() {
   return (
     <main className="auth-page">
+      <AuthStory/>
       <section className="auth-card">
-        <span className="eyebrow">ContasEmDia</span>
+        <Brand/>
         <h1 className="auth-title">Entrar</h1>
         <p className="auth-subtitle">Acesse suas contas e vencimentos.</p>
         <LoginForm />

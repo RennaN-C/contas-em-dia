@@ -1,0 +1,4 @@
+import { Icon } from './Icon';
+export function AuthStory() {
+  return <aside className="auth-story"><span className="story-tag">MENOS PREOCUPAÇÃO. MAIS POSSIBILIDADES.</span><h2>Seu dinheiro<br/>merece um <em>plano.</em></h2><p>Contas organizadas, vencimentos no radar e espaço para o que realmente importa.</p><div className="story-illustration" aria-hidden="true"><span className="story-orbit orbit-one"/><span className="story-orbit orbit-two"/><span className="story-orbit orbit-three"/><span className="story-center">s<span>+</span></span><span className="floating-icon float-one"><Icon name="check"/></span><span className="floating-icon float-two"><Icon name="trend"/></span><span className="floating-icon float-three"><Icon name="bell"/></span></div><span className="story-footer">Sua vida financeira, um passo à frente.</span></aside>;
+}

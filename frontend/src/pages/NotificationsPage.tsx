@@ -1,10 +1,5 @@
-import { PagePlaceholder } from "../components/PagePlaceholder";
+import { Notifications } from '../features/notifications/Notifications';
 
 export function NotificationsPage() {
-  return (
-    <PagePlaceholder
-      title="Avisos"
-      description="Avisos de vencimento, resumo semanal e juros estimados."
-    />
-  );
+  return <Notifications/>;
 }
