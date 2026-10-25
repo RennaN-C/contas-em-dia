@@ -40,7 +40,7 @@ efetivamente pagos; a dívida principal continua separada.
 
 ## Validação executada
 
-- **315 testes Vitest aprovados: 225 backend + 90 frontend**, com **38 testes
+- **316 testes Vitest aprovados: 226 backend + 90 frontend**, com **38 testes
   PostgreSQL reais** em bancos isolados.
 - Builds TypeScript/backend e TypeScript/Vite/frontend aprovados.
 - **40 verificações no Google Chrome instalado**, headless/Playwright,
@@ -53,6 +53,9 @@ efetivamente pagos; a dívida principal continua separada.
 - Navegação com Tab no modal não alcança o fundo; Escape retorna a **Nova conta**.
 - Modal desktop/mobile também verificado com a conta demonstrativa local, sem
   gravar pagamento na conta de demonstração. Sem overflow em viewport de 390px.
+- A CI expôs um conflito serializável transitório entre jobs e gravações.
+  Pagamentos/alterações agora usam repetição limitada da transação serializável,
+  preservando a chave de idempotência; regressão coberta por teste específico.
 
 Auditorias automáticas não equivalem a certificação completa de acessibilidade.
 O objetivo acordado continua sendo apresentação local, sem deploy público.
