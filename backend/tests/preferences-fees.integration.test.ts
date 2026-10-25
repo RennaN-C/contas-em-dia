@@ -1,0 +1,25 @@
+import {randomUUID} from 'node:crypto';
+import {afterAll,beforeAll,describe,expect,it} from 'vitest';
+import request from 'supertest';
+import {app} from '../src/app.js';
+import {prisma} from '../src/lib/prisma.js';
+import {env} from '../src/config/env.js';
+import {createAccessToken} from '../src/modules/auth/token.service.js';
+import {businessDay,addDays} from '../src/modules/notifications/dates.js';
+describe.skipIf(process.env.RUN_DATABASE_TESTS!=='1')('preferências e encargos reais PostgreSQL',()=>{
+ const owner=randomUUID(),other=randomUUID(),key=randomUUID();const headers={Authorization:`Bearer ${createAccessToken(owner,env.JWT_SECRET)}`},foreign={Authorization:`Bearer ${createAccessToken(other,env.JWT_SECRET)}`};let accountId:string;
+ const defaults={ordenacaoContas:'vencimento',confirmarPagamento:true,reduzirMovimento:false};
+ const prefs={ordenacaoContas:'valor',confirmarPagamento:false,reduzirMovimento:true};
+ beforeAll(async()=>{await prisma.usuario.createMany({data:[owner,other].map(id=>({id,nome:'QA preferências',email:`${id}@example.org`,senhaHash:'teste'}))});accountId=(await prisma.conta.create({data:{usuarioId:owner,descricao:'Principal e encargos',valor:100,vencimento:addDays(businessDay(),-5)}})).id;});
+ afterAll(async()=>{await prisma.usuario.deleteMany({where:{id:{in:[owner,other]}}});await prisma.$disconnect();});
+ it('preferências exigem JWT',async()=>{expect((await request(app).get('/api/users/me/preferences')).status).toBe(401);expect((await request(app).put('/api/users/me/preferences').send(prefs)).status).toBe(401);});
+ it('padrões são retornados sem gravar configuração em GET',async()=>{expect((await request(app).get('/api/users/me/preferences').set(headers)).body.preferences).toEqual(defaults);expect(await prisma.preferenciaUsuario.count({where:{usuarioId:owner}})).toBe(0);});
+ it('salva e recupera preferências somente do proprietário',async()=>{expect((await request(app).put('/api/users/me/preferences').set(headers).send(prefs)).body.preferences).toEqual(prefs);expect((await request(app).get('/api/users/me/preferences').set(headers)).body.preferences).toEqual(prefs);expect((await request(app).get('/api/users/me/preferences').set(foreign)).body.preferences).toEqual(defaults);});
+ it('rejeita tentativa de alterar outro usuário e valores inválidos',async()=>{for(const body of [{...prefs,usuarioId:other},{...prefs,ordenacaoContas:'invalida'},{...prefs,confirmarPagamento:'false'}])expect((await request(app).put('/api/users/me/preferences').set(headers).send(body)).status).toBe(400);});
+ const payment=()=>({valor:40,encargos:.90,pagoEm:businessDay().toISOString().slice(0,10),chave:key});
+ it('registra encargos reais separados e amortiza somente o principal',async()=>{const r=await request(app).post(`/api/accounts/${accountId}/payments`).set(headers).send(payment());expect(r.status).toBe(201);expect(Number(r.body.payment.encargos)).toBe(.9);const c=(await request(app).get(`/api/accounts/${accountId}`).set(headers)).body.account;expect(c.saldo).toBe(60);expect(c.status).toBe('ATRASADA');});
+ it('repetição mantém encargos e mesmo registro; mudança do payload é conflito',async()=>{expect((await request(app).post(`/api/accounts/${accountId}/payments`).set(headers).send(payment())).status).toBe(201);expect(await prisma.pagamento.count({where:{contaId:accountId}})).toBe(1);expect((await request(app).post(`/api/accounts/${accountId}/payments`).set(headers).send({...payment(),encargos:1})).status).toBe(409);});
+ it('histórico preserva principal/encargos e é isolado',async()=>{const r=await request(app).get(`/api/payments?contaId=${accountId}`).set(headers);expect(Number(r.body.payments[0].valor)).toBe(40);expect(Number(r.body.payments[0].encargos)).toBe(.9);expect((await request(app).get(`/api/payments?contaId=${accountId}`).set(foreign)).body.payments).toEqual([]);});
+ it('encargos negativos/inválidos e amortização acima do saldo são rejeitados',async()=>{for(const encargos of [-1,.001,'2'])expect((await request(app).post(`/api/accounts/${accountId}/payments`).set(headers).send({...payment(),encargos,chave:randomUUID()})).status).toBe(400);expect((await request(app).post(`/api/accounts/${accountId}/payments`).set(headers).send({...payment(),valor:61,chave:randomUUID()})).status).toBe(409);});
+ it('quitar saldo sem encargos não inclui estimativa automaticamente',async()=>{expect((await request(app).post(`/api/accounts/${accountId}/payments`).set(headers).send({...payment(),valor:60,encargos:0,chave:randomUUID()})).status).toBe(201);const c=(await request(app).get(`/api/accounts/${accountId}`).set(headers)).body.account;expect(c.status).toBe('PAGA');expect(c.saldo).toBe(0);expect(Number((await prisma.pagamento.aggregate({where:{contaId:accountId},_sum:{encargos:true}}))._sum.encargos)).toBe(.9);});
+});

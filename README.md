@@ -8,7 +8,7 @@ de avisos. Gráficos usam dados reais da API e oferecem tabela de valores;
 animações respeitam a preferência de movimento reduzido. A identidade visual
 foi atualizada sem alterar a stack ou invalidar as sessões existentes.
 
-Consulte o [relatório atual de apresentação local](docs/relatorio-apresentacao-local.md)
+Consulte o [relatório atual de juros, pagamentos e modais](docs/relatorio-pagamentos-modais.md)
 para resultados, screenshots desktop/mobile e reprodução do fluxo no Chrome.
 
 ## Stack
@@ -153,6 +153,8 @@ O botão de atualização processa somente os dados do usuário autenticado.
 | PATCH | `/api/messages/read-all` | `{ updated }`, marca somente mensagens do usuário como lidas |
 | POST | `/api/accounts/recurrences/sync` | `{ created }`, prevê competências do usuário até o próximo mês |
 | PATCH | `/api/accounts/:id/recurrence` | Corpo `{ ativa: boolean }`, pausa/retoma a série inteira |
+| GET | `/api/users/me/preferences` | Preferências de ordenação, revisão de pagamento e movimento reduzido |
+| PUT | `/api/users/me/preferences` | Atualiza preferências somente do usuário autenticado |
 
 Leitura de mensagem alheia ou inexistente retorna 404; UUID inválido retorna 400.
 Mensagens contêm `tipo` (`AVISO` ou `RESUMO_SEMANAL`), `titulo`, `conteudo`,
@@ -327,5 +329,37 @@ A recuperação não consegue executar enquanto nenhum processo é iniciado e co
 até sete dias de interrupção. Não existe endpoint administrativo público de cron.
 Sem provedor configurado, não há validação de execução remota nem deploy nesta entrega.
 
-Multas/taxas contratuais por conta e recuperação de senha por e-mail continuam
+Configuração de percentuais contratuais por conta e recuperação de senha por e-mail continuam
 fora desta entrega. A simulação com Selic é demonstrativa e não cria cobranças.
+
+## Pagamentos com juros visíveis e modais
+
+Na página **Contas**, cada cartão atrasado apresenta dias de atraso, juros e
+total estimados, taxa/fonte e estado de consulta. **Pagar**, **Editar** e
+**Pagamentos** ficam alinhados; ações de série/exclusão são secundárias.
+Cadastro, edição, pagamento, histórico e confirmação de exclusão abrem em modal
+central com foco contido, Escape, bloqueio do fundo e retorno ao botão de origem.
+
+Ao pagar, o modal mostra o principal e a estimativa de atraso. A preferência
+padrão solicita revisão antes da gravação. O valor da simulação **não é somado
+automaticamente ao débito nem ao pagamento**. Se foram cobrados juros/multa reais,
+marque **Também paguei encargos** e informe o valor efetivamente pago.
+
+`POST /api/accounts/:id/payments` aceita adicionalmente `encargos` opcional
+(não negativo, até duas casas; padrão zero). `valor` continua sendo o principal
+amortizado e não pode superar o saldo. O histórico, registro detalhado, CSV e
+indicadores discriminam principal, encargos e total pago. A chave de idempotência
+inclui o valor dos encargos na comparação do payload.
+
+Após gravar, é possível **Consultar histórico** ou concluir. Em **Pagamentos**,
+**Ver registro** abre os detalhes de cada pagamento. Trata-se do registro interno
+do sistema; não há emissão de comprovante bancário.
+
+Em **Configurações**, ordenação de contas, revisão antes de pagar e redução de
+animações são persistidas por usuário. Moeda, calendário e critérios financeiros
+são exibidos como referências. **Perfil** tem resumo pessoal e edição em modal;
+o cadastro apresenta orientações de senha e confirmação.
+
+Migração aditiva `20261025030000_preferencias_encargos`: acrescenta encargos
+(zero nos pagamentos anteriores) e preferências por usuário, sem recalcular ou
+remover histórico existente.

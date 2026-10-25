@@ -9,5 +9,6 @@ export const navigationItems: NavigationItem[] = [
   { to: "/contas", label: "Contas" },
   { to: "/pagamentos", label: "Pagamentos" },
   { to: "/avisos", label: "Avisos" },
-  { to: "/perfil", label: "Perfil" }
+  { to: "/perfil", label: "Perfil" },
+  { to: "/configuracoes", label: "Configurações" }
 ];

@@ -3,7 +3,7 @@ import { prisma } from '../../lib/prisma.js';
 import { dateOnly, money } from '../accounts/accounts.schema.js';
 import { AccountError, accountStatus, cents, nextDue } from '../accounts/accounts.service.js';
 import { businessDay } from '../notifications/dates.js';
-export const paymentSchema = z.object({valor:money,pagoEm:dateOnly.refine(v=>v<=businessDay().toISOString().slice(0,10),'Pagamento não pode estar no futuro'),chave:z.string().uuid()}).strict();
+export const paymentSchema = z.object({valor:money,encargos:money.or(z.literal(0)).optional(),pagoEm:dateOnly.refine(v=>v<=businessDay().toISOString().slice(0,10),'Pagamento não pode estar no futuro'),chave:z.string().uuid()}).strict();
 export async function registerPayment(usuarioId:string,id:string,input:z.infer<typeof paymentSchema>) {
  return prisma.$transaction(async tx=>{
   await tx.$queryRaw`SELECT id FROM contas WHERE id = ${id} AND usuario_id = ${usuarioId} FOR UPDATE`;
@@ -11,12 +11,12 @@ export async function registerPayment(usuarioId:string,id:string,input:z.infer<t
   if(!c) throw new AccountError('Conta não encontrada',404);
   const existing=await tx.pagamento.findUnique({where:{chave:input.chave}});
   if(existing) {
-   if(existing.contaId!==id || cents(existing.valor)!==cents(input.valor) || existing.pagoEm.toISOString().slice(0,10)!==input.pagoEm) throw new AccountError('Chave de idempotência já utilizada');
+   if(existing.contaId!==id || cents(existing.valor)!==cents(input.valor) || cents(existing.encargos??0)!==cents(input.encargos??0) || existing.pagoEm.toISOString().slice(0,10)!==input.pagoEm) throw new AccountError('Chave de idempotência já utilizada');
    return existing;
   }
   const paid=c.pagamentos.reduce((n,p)=>n+cents(p.valor),0);
   if(paid+cents(input.valor)>cents(c.valor)) throw new AccountError('Pagamento excede o saldo da conta');
-  const payment=await tx.pagamento.create({data:{contaId:id,valor:input.valor,pagoEm:new Date(input.pagoEm),chave:input.chave}});
+  const payment=await tx.pagamento.create({data:{contaId:id,valor:input.valor,...(input.encargos!==undefined?{encargos:input.encargos}:{}),pagoEm:new Date(input.pagoEm),chave:input.chave}});
   const status=accountStatus(c.valor,c.vencimento,[...c.pagamentos,payment]);
   await tx.conta.update({where:{id},data:{status}});
   if(status==='PAGA' && c.tipo==='RECORRENTE' && c.recorrenciaAtiva !== false) {

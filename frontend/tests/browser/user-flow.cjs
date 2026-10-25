@@ -37,12 +37,14 @@ async function visible(locator) { await locator.waitFor({ state: 'visible', time
   async function navigate(label) { await page.getByRole('navigation').getByRole('link', { name: label, exact: true }).click(); }
   async function createAccount(description, amount, due, type='AVULSA') {
     await page.getByRole('button', { name: 'Nova conta', exact: true }).click();
+    await visible(page.getByRole('dialog',{name:'Nova conta',exact:true}));
     const form = page.locator('form');
     await form.getByLabel('Descrição', { exact: true }).fill(description);
     await form.getByLabel('Valor', { exact: true }).fill(String(amount));
     await form.getByLabel('Vencimento', { exact: true }).fill(due);
     await form.getByRole('combobox').first().selectOption(type);
     await form.getByRole('button', { name: 'Salvar', exact: true }).click();
+    await page.getByRole('dialog',{name:'Nova conta',exact:true}).waitFor({state:'detached'});
     await visible(page.getByRole('heading', { name: description, exact: true }).first());
   }
   try {
@@ -82,13 +84,22 @@ async function visible(locator) { await locator.waitFor({ state: 'visible', time
     await visible(page.getByRole('heading', { name: 'Vencimento hoje', exact: true }));
     assert.equal((await get('/messages')).messages.find(m => m.id === notice.id).lida, true); step('Aviso único, mensagem marcada como lida e persistência após reload');
     await navigate('Contas'); await page.getByRole('button', { name: 'Pagar Conta QA ciclo completo', exact: true }).click();
+    await visible(page.getByRole('dialog',{name:'Registrar pagamento',exact:true}));
+    await visible(page.locator('.app-modal .interest-preview'));
+    await accessibility('modal pagamento com juros');await screenshot('saldo-plus-modal-pagamento.png');
+    assert.match(await page.locator('.app-modal').innerText(),/Juros estimados/);step('Juros visíveis no cartão e no modal central de pagamento');
     await page.getByLabel('Valor do pagamento', { exact: true }).fill('40');
     await page.getByRole('button', { name: 'Registrar pagamento', exact: true }).click();
+    await page.getByRole('button',{name:'Confirmar pagamento',exact:true}).click();
+    await visible(page.getByRole('heading',{name:'Pagamento registrado',exact:true}));
     await page.locator('form').waitFor({ state: 'detached' });
+    await page.getByRole('button',{name:'Concluir',exact:true}).click();
     const account = (await get('/accounts')).accounts.find(c => c.descricao === 'Conta QA ciclo completo');
     assert.equal(account.saldo, 60); assert.equal(account.status, 'ATRASADA'); assert.equal(account.pagamentos.length, 1); step('Pagamento parcial real: R$ 100 − R$ 40 = R$ 60 pendentes');
     await page.getByRole('button', { name: 'Histórico de Conta QA ciclo completo', exact: true }).click();
-    await visible(page.getByRole('region', { name: 'Histórico de pagamentos' }).getByText(/40,00/)); step('Histórico de pagamento visível');
+    await visible(page.getByRole('region', { name: 'Histórico de pagamentos' }).getByText(/40,00/).first()); step('Histórico de pagamento visível');
+    await page.getByRole('button',{name:'Consultar pagamento de Conta QA ciclo completo',exact:true}).click();await visible(page.getByRole('dialog',{name:'Registro de pagamento',exact:true}));await page.getByRole('button',{name:'Fechar registro',exact:true}).click();
+    await page.getByRole('button',{name:'Fechar janela',exact:true}).click();step('Consulta de registro detalhado em modal com retorno ao histórico');
     await navigate('Avisos'); await visible(page.getByText(/30 dia\(s\) de atraso/));
     try {
       const response = await page.request.get('https://brasilapi.com.br/api/taxas/v1/Selic', { timeout: 10000 });
@@ -114,11 +125,11 @@ async function visible(locator) { await locator.waitFor({ state: 'visible', time
     await page.reload(); await visible(page.getByText(/Juros estimados:.*0,74/));
     assert.match(await page.locator('main').innerText(), /60,74/); step('Cenário controlado no Chrome: resposta simulada com 15% a.a., juros R$ 0,74 e total R$ 60,74');
     await page.unroute('**/api/notifications/interest-estimates');
-    await navigate('Pagamentos'); await visible(page.getByRole('region', { name: 'Histórico de pagamentos' }).getByText(/40,00/)); await accessibility('pagamentos desktop');
+    await navigate('Pagamentos'); await visible(page.getByRole('region', { name: 'Histórico de pagamentos' }).getByText(/40,00/).first()); await accessibility('pagamentos desktop');
     const downloaded = page.waitForEvent('download'); await page.getByRole('button',{name:'Exportar CSV',exact:true}).click();
     const download=await downloaded; const csv=fs.readFileSync(await download.path(),'utf8');assert.match(csv,/Conta QA ciclo completo/);assert.match(csv,/40.00/);step('Exportação CSV real do histórico do usuário');
     await navigate('Perfil'); await visible(page.getByRole('heading', { name: 'Perfil', exact: true })); assert.match(await page.locator('.profile-panel').innerText(), /Rennan QA/); await accessibility('perfil desktop');
-    await page.getByLabel('Nome',{exact:true}).fill('Rennan QA Atualizado');await page.getByRole('button',{name:'Salvar perfil',exact:true}).click();await visible(page.getByText('Perfil atualizado com sucesso.',{exact:true}));
+    await page.getByRole('button',{name:'Editar perfil',exact:true}).click();await accessibility('modal editar perfil');await page.getByLabel('Nome',{exact:true}).fill('Rennan QA Atualizado');await page.getByRole('button',{name:'Salvar perfil',exact:true}).click();await visible(page.getByText('Perfil atualizado com sucesso.',{exact:true}));
     assert.equal((await get('/users/me')).user.nome,'Rennan QA Atualizado');step('Edição de perfil persiste e atualiza sessão sem trocar o JWT');
     step('Navegação por pagamentos e perfil com dados reais');
     await navigate('Início'); await visible(page.getByText('Compromissos e pagamentos', { exact: true }));
@@ -142,6 +153,10 @@ async function visible(locator) { await locator.waitFor({ state: 'visible', time
     await page.getByRole('button',{name:'Pausar recorrência de Mensal QA previsão',exact:true}).first().click();await visible(page.getByText('Recorrência pausada.',{exact:false}));monthly=(await get('/accounts')).accounts.filter(c=>c.descricao==='Mensal QA previsão');assert.ok(monthly.every(c=>c.recorrenciaAtiva===false));
     await page.getByRole('button',{name:'Retomar recorrência de Mensal QA previsão',exact:true}).first().click();await visible(page.getByText('Recorrência retomada.',{exact:false}));await page.getByRole('button',{name:'Atualizar previsões',exact:true}).click();await visible(page.getByText(/nova\(s\) mensalidade\(s\) prevista\(s\)/));
     assert.equal((await get('/accounts')).accounts.filter(c=>c.descricao==='Mensal QA previsão').length,monthly.length);step('Pausa, retomada e sincronização sem duplicar mensalidades');
+    await page.getByRole('button',{name:'Nova conta',exact:true}).click();await visible(page.getByRole('dialog',{name:'Nova conta',exact:true}));
+    for(let n=0;n<8;n++){await page.keyboard.press('Tab');assert.ok(await page.evaluate(()=>!!document.activeElement.closest('dialog')),'Foco escapou do modal');}await page.keyboard.press('Escape');await page.getByRole('dialog').waitFor({state:'detached'});assert.equal(await page.evaluate(()=>document.activeElement.textContent),'Nova conta');step('Modal mantém foco e Escape devolve ao botão de origem');
+    await createAccount('Encargos QA',10,date(-2));await page.getByRole('button',{name:'Pagar Encargos QA',exact:true}).click();await page.getByRole('checkbox').check();await page.getByLabel('Encargos efetivamente pagos',{exact:true}).fill('1.25');await page.getByRole('button',{name:'Registrar pagamento',exact:true}).click();await page.getByRole('button',{name:'Confirmar pagamento',exact:true}).click();await visible(page.getByRole('heading',{name:'Pagamento registrado',exact:true}));assert.match(await page.locator('.receipt-total').innerText(),/11,25/);await page.getByRole('button',{name:'Concluir',exact:true}).click();const feeAccount=(await get('/accounts')).accounts.find(c=>c.descricao==='Encargos QA');assert.equal(feeAccount.saldo,0);assert.equal(Number(feeAccount.pagamentos[0].encargos),1.25);step('Encargos reais persistidos separadamente, com principal quitado corretamente');
+    await navigate('Configurações');await visible(page.getByRole('button',{name:'Salvar configurações',exact:true}));await page.getByRole('combobox').selectOption('valor');await page.getByRole('checkbox').nth(0).uncheck();await page.getByRole('checkbox').nth(1).check();await page.getByRole('button',{name:'Salvar configurações',exact:true}).click();await visible(page.getByText('Configurações salvas. As preferências já estão em uso.',{exact:true}));await page.reload();await visible(page.getByRole('button',{name:'Salvar configurações',exact:true}));assert.equal(await page.getByRole('checkbox').nth(0).isChecked(),false);assert.equal(await page.evaluate(()=>document.documentElement.dataset.reduceMotion),'true');await accessibility('configuracoes desktop');await screenshot('saldo-plus-configuracoes.png');step('Preferências salvas por usuário e preservadas após reload');
     await navigate('Avisos');await page.getByRole('button',{name:'Atualizar avisos',exact:true}).click();await visible(page.getByText('Avisos e previsões atualizados.',{exact:true}));
     await page.getByRole('button',{name:'Marcar todas como lidas',exact:true}).click();await visible(page.getByText('Todas as mensagens foram marcadas como lidas.',{exact:true}));assert.equal((await get('/messages/summary')).unread,0);step('Atualização de avisos e leitura em lote zeram contador real');
     const otherEmail=`other.${stamp}@example.org`;

@@ -1,5 +1,8 @@
 # Saldo + — preparação e validação para apresentação local
 
+> Revisão anterior da PR #36. Para juros nas contas, modais de pagamento e
+> preferências, consulte o [relatório atual](relatorio-pagamentos-modais.md).
+
 Data: 25/10/2026. Responsável: Rennan. Branch: `feat/saldo-plus-apresentacao`.
 Escopo de hospedagem confirmado pelo usuário: **apresentação local**.
 

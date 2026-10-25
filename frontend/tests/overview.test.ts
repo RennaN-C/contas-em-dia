@@ -11,6 +11,9 @@ it('agrega saldos e pagamentos sem cobrar sobre valores pagos', () => {
   const view = financialOverview([account], [payment], now);
   expect(view.balance).toBe(60); expect(view.paid).toBe(40); expect(view.late).toBe(60);
 });
+it('inclui encargos efetivamente pagos nos indicadores e no gráfico mensal',()=>{
+ const view=financialOverview([account],[{...payment,encargos:'.90'}],now);expect(view.paid).toBe(40.9);expect(view.balance).toBe(60);expect(view.months.at(-1)!.pagamentos).toBe(40.9);
+});
 it('usa status da API e exclui quitadas das pendências', () => {
   const view = financialOverview([{ ...account, saldo: 0, status: 'PAGA' }, { ...account, id: '2', status: 'PENDENTE' }], [payment], now);
   expect(view.pending).toHaveLength(1); expect(view.overdue).toHaveLength(0); expect(view.late).toBe(0);

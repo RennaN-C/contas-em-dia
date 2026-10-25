@@ -1,5 +1,5 @@
 {
-  "startedAt": "2026-10-25T21:10:52.899Z",
+  "startedAt": "2026-10-25T21:42:21.940Z",
   "browser": "Google Chrome",
   "isolated": true,
   "steps": [
@@ -31,7 +31,7 @@
     {
       "name": "Acessibilidade automática: contas desktop",
       "status": "passed",
-      "rulesPassed": 22
+      "rulesPassed": 26
     },
     {
       "name": "Jobs reais de aviso e resumo, com reexecução idempotente",
@@ -42,11 +42,24 @@
       "status": "passed"
     },
     {
+      "name": "Acessibilidade automática: modal pagamento com juros",
+      "status": "passed",
+      "rulesPassed": 17
+    },
+    {
+      "name": "Juros visíveis no cartão e no modal central de pagamento",
+      "status": "passed"
+    },
+    {
       "name": "Pagamento parcial real: R$ 100 − R$ 40 = R$ 60 pendentes",
       "status": "passed"
     },
     {
       "name": "Histórico de pagamento visível",
+      "status": "passed"
+    },
+    {
+      "name": "Consulta de registro detalhado em modal com retorno ao histórico",
       "status": "passed"
     },
     {
@@ -68,7 +81,7 @@
     {
       "name": "Acessibilidade automática: avisos desktop",
       "status": "passed",
-      "rulesPassed": 22
+      "rulesPassed": 23
     },
     {
       "name": "Cenário controlado no Chrome: resposta simulada com 15% a.a., juros R$ 0,74 e total R$ 60,74",
@@ -86,7 +99,12 @@
     {
       "name": "Acessibilidade automática: perfil desktop",
       "status": "passed",
-      "rulesPassed": 22
+      "rulesPassed": 21
+    },
+    {
+      "name": "Acessibilidade automática: modal editar perfil",
+      "status": "passed",
+      "rulesPassed": 18
     },
     {
       "name": "Edição de perfil persiste e atualiza sessão sem trocar o JWT",
@@ -108,7 +126,7 @@
     {
       "name": "Acessibilidade automática: avisos mobile 390px",
       "status": "passed",
-      "rulesPassed": 22
+      "rulesPassed": 23
     },
     {
       "name": "Acessibilidade automática: dashboard mobile 390px",
@@ -125,6 +143,23 @@
     },
     {
       "name": "Pausa, retomada e sincronização sem duplicar mensalidades",
+      "status": "passed"
+    },
+    {
+      "name": "Modal mantém foco e Escape devolve ao botão de origem",
+      "status": "passed"
+    },
+    {
+      "name": "Encargos reais persistidos separadamente, com principal quitado corretamente",
+      "status": "passed"
+    },
+    {
+      "name": "Acessibilidade automática: configuracoes desktop",
+      "status": "passed",
+      "rulesPassed": 24
+    },
+    {
+      "name": "Preferências salvas por usuário e preservadas após reload",
       "status": "passed"
     },
     {
@@ -154,6 +189,10 @@
       "violations": []
     },
     {
+      "page": "modal pagamento com juros",
+      "violations": []
+    },
+    {
       "page": "avisos desktop",
       "violations": []
     },
@@ -163,6 +202,10 @@
     },
     {
       "page": "perfil desktop",
+      "violations": []
+    },
+    {
+      "page": "modal editar perfil",
       "violations": []
     },
     {
@@ -176,16 +219,22 @@
     {
       "page": "dashboard mobile 390px",
       "violations": []
+    },
+    {
+      "page": "configuracoes desktop",
+      "violations": []
     }
   ],
   "errors": [],
   "screenshots": [
     "saldo-plus-cadastro.png",
     "saldo-plus-contas.png",
+    "saldo-plus-modal-pagamento.png",
     "saldo-plus-avisos.png",
     "saldo-plus-dashboard.png",
     "saldo-plus-mobile-avisos.png",
-    "saldo-plus-mobile-dashboard.png"
+    "saldo-plus-mobile-dashboard.png",
+    "saldo-plus-configuracoes.png"
   ],
   "brasilApi": {
     "httpStatus": 200,
@@ -195,5 +244,5 @@
   "rateSource": "Banco Central · SGS 432",
   "rateCached": true,
   "status": "passed",
-  "finishedAt": "2026-10-25T21:11:06.768Z"
+  "finishedAt": "2026-10-25T21:42:38.653Z"
 }

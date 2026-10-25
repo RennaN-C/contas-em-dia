@@ -8,6 +8,7 @@ import { NotificationsPage } from "./pages/NotificationsPage";
 import { PaymentsPage } from "./pages/PaymentsPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { RegisterPage } from "./pages/RegisterPage";
+import {SettingsPage} from './pages/SettingsPage';
 
 export function App() {
   return (
@@ -19,6 +20,7 @@ export function App() {
           <Route path="/pagamentos" element={<PaymentsPage />} />
           <Route path="/avisos" element={<NotificationsPage />} />
           <Route path="/perfil" element={<ProfilePage />} />
+          <Route path="/configuracoes" element={<SettingsPage/>}/>
         </Route>
       </Route>
       <Route element={<GuestRoute />}>
