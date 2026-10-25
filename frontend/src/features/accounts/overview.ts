@@ -1,8 +1,9 @@
 import type { Account } from './accounts.api';
 import type { Payment } from '../payments/Payments';
+import {todayISO} from '../../services/dates';
 
 /** Presentation aggregates only; balances/statuses come from the authenticated API. */
-export function financialOverview(accounts: Account[], payments: Payment[], today = new Date()) {
+export function financialOverview(accounts: Account[], payments: Payment[], today = new Date(todayISO())) {
   const sum = (values: number[]) => values.reduce((total, value) => total + Math.round(value * 100), 0) / 100;
   const pending = accounts.filter(c => c.saldo > 0);
   const overdue = pending.filter(c => c.status === 'ATRASADA');

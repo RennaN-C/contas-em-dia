@@ -4,6 +4,7 @@ import { Messages } from '../messages/Messages';
 import { notificationsApi, type Summary, type Estimate } from './notifications.api';
 import {Link} from 'react-router';
 import {Icon} from '../../components/Icon';
+import {displayTimestamp} from '../../services/dates';
 
 function WeeklySummary() {
   const [data, setData] = useState<Summary>();
@@ -41,7 +42,7 @@ function InterestEstimates() {
     {loading ? <p role="status">Consultando estimativas…</p> : error ? <p role="alert">{error} <button onClick={() => setRevision(v => v + 1)}>Recarregar estimativas</button></p> : rows.length === 0 ? <p>Nenhuma conta atrasada com saldo pendente.</p> : <>
       {rows.some(r => r.status === 'indisponivel') && <p role="status">Selic indisponível. <button onClick={() => setRevision(v => v + 1)}>Consultar taxa novamente</button></p>}
       <ul className="finance-list">{rows.map(r => <li className="finance-card" key={r.conta.id}><h3>{r.conta.descricao}</h3><p>Vencimento: {displayDate(r.conta.vencimento)} · {r.dias} dia(s) de atraso · Saldo: {currency(r.saldo)}</p>
-        {r.status === 'disponivel' ? <><p>Selic: {r.taxaAnual.toLocaleString('pt-BR')}% ao ano · Juros estimados: {currency(r.juros)} · Total estimado: <strong>{currency(r.valorEstimado)}</strong></p>{r.fonte && <p className="rate-source">Fonte: {r.fonte}{r.emCache ? ' · Em cache' : ''}{r.consultadaEm ? ` · Consultada em ${displayDate(r.consultadaEm)}` : ''}</p>}{r.desatualizada && <p role="status" className="rate-warning">Última taxa conhecida, ainda sem confirmação de atualização. Considere a data de consulta nesta simulação.</p>}</> : <p>Estimativa indisponível enquanto não for possível consultar a Selic.</p>}
+        {r.status === 'disponivel' ? <><p>Selic: {r.taxaAnual.toLocaleString('pt-BR')}% ao ano · Juros estimados: {currency(r.juros)} · Total estimado: <strong>{currency(r.valorEstimado)}</strong></p>{r.fonte && <p className="rate-source">Fonte: {r.fonte}{r.emCache ? ' · Em cache' : ''}{r.consultadaEm ? ` · Consultada em ${displayTimestamp(r.consultadaEm)}` : ''}</p>}{r.desatualizada && <p role="status" className="rate-warning">Última taxa conhecida, ainda sem confirmação de atualização. Considere a data de consulta nesta simulação.</p>}</> : <p>Estimativa indisponível enquanto não for possível consultar a Selic.</p>}
       </li>)}</ul>
     </>}
   </section>;

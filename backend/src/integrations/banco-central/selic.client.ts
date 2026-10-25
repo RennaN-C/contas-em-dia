@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { utcDay, addDays } from '../../modules/notifications/dates.js';
+import { businessDay, addDays } from '../../modules/notifications/dates.js';
 
 // SGS 432 is the annual Selic TARGET (% p.a.), never the daily SGS 11 rate.
 export const BCB_SELIC_URL = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados';
@@ -8,7 +8,7 @@ export async function fetchCentralBankSelic(fetcher: typeof fetch = fetch, timeo
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
   const format = (d: Date) => d.toISOString().slice(0, 10).split('-').reverse().join('/');
-  const end = utcDay(now), start = addDays(end, -14);
+  const end = businessDay(now), start = addDays(end, -14);
   const url = `${BCB_SELIC_URL}?formato=json&dataInicial=${format(start)}&dataFinal=${format(end)}`;
   try {
     const timeout = new Promise<never>((_, reject) => { timer = setTimeout(() => { controller.abort(); reject(new Error('Timeout Banco Central')); }, timeoutMs); });

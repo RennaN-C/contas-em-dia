@@ -5,7 +5,7 @@ Escopo de hospedagem confirmado pelo usuário: **apresentação local**.
 
 ## Resultado técnico
 
-- **288 testes Vitest aprovados: 216 backend + 72 frontend**, incluindo
+- **290 testes Vitest aprovados: 216 backend + 74 frontend**, incluindo
   **29 testes de integração PostgreSQL real**, em banco isolado.
 - TypeScript e builds backend/frontend aprovados.
 - **32 verificações no Chrome real** (instalado, headless via Playwright),

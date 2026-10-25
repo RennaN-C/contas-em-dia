@@ -13,11 +13,11 @@ export async function recoverJobs(now = businessDay()) {
     const date = addDays(utcDay(now), offset), key = `daily:${date.toISOString().slice(0, 10)}`;
     if (offset < 0 && await prisma.execucaoJob.findUnique({ where: { chave: key } })) continue;
     await processNotifications(date);
-    await transaction(tx => tx.execucaoJob.upsert({ where: { chave: key }, update: {}, create: { chave: key, concluidoEm: now } }));
+    await transaction(tx => tx.execucaoJob.upsert({ where: { chave: key }, update: {}, create: { chave: key, concluidoEm: new Date() } }));
   }
   const week = weekStart(now), key = `weekly:${week.toISOString().slice(0, 10)}`;
   {
     await processWeeklySummaries(now);
-    await prisma.execucaoJob.upsert({ where: { chave: key }, update: {}, create: { chave: key, concluidoEm: now } });
+    await prisma.execucaoJob.upsert({ where: { chave: key }, update: {}, create: { chave: key, concluidoEm: new Date() } });
   }
 }

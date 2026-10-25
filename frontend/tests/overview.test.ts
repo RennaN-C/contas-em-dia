@@ -1,9 +1,12 @@
-import { expect, it } from 'vitest';
+import { expect, it,vi } from 'vitest';
 import { financialOverview } from '../src/features/accounts/overview';
 import type { Account } from '../src/features/accounts/accounts.api';
 const account: Account = { id: '1', descricao: 'Conta', valor: '100.00', saldo: 60, status: 'ATRASADA', vencimento: '2026-10-01', tipo: 'AVULSA', recorrencia: null };
 const payment = { id: 'p', valor: '40.00', pagoEm: '2026-10-05', conta: { id: '1', descricao: 'Conta' } };
 const now = new Date('2026-10-25');
+it('mês atual do gráfico muda somente à meia-noite de Brasília',()=>{
+  vi.useFakeTimers();try{vi.setSystemTime(new Date('2027-01-01T02:59:00Z'));expect(financialOverview([],[]).months.at(-1)!.key).toBe('2026-12');}finally{vi.useRealTimers();}
+});
 it('agrega saldos e pagamentos sem cobrar sobre valores pagos', () => {
   const view = financialOverview([account], [payment], now);
   expect(view.balance).toBe(60); expect(view.paid).toBe(40); expect(view.late).toBe(60);
