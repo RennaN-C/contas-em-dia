@@ -18,6 +18,7 @@ export function LoginForm() {
   const [errors, setErrors] = useState<LoginErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword,setShowPassword]=useState(false);
 
   function updateField(field: keyof LoginInput, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
@@ -82,7 +83,7 @@ export function LoginForm() {
         <input
           id="login-senha"
           name="senha"
-          type="password"
+          type={showPassword?'text':'password'}
           autoComplete="current-password"
           value={values.senha}
           onChange={(event) => updateField("senha", event.target.value)}
@@ -96,6 +97,7 @@ export function LoginForm() {
         )}
       </div>
 
+      <button className="password-toggle" type="button" aria-pressed={showPassword} onClick={()=>setShowPassword(v=>!v)}>{showPassword?'Ocultar senha':'Mostrar senha'}</button>
       <button className="button" type="submit" disabled={submitting}>
         {submitting ? "Entrando..." : "Entrar"}
       </button>

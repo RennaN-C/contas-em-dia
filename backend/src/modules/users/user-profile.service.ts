@@ -54,10 +54,11 @@ export async function updateProfile(
     }
   }
 
-  const updatedUser = await repository.update(userId, {
-    nome: input.nome,
-    email: input.email
-  });
-
-  return toPublicUser(updatedUser);
+  try {
+    const updatedUser = await repository.update(userId, { nome: input.nome, email: input.email });
+    return toPublicUser(updatedUser);
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') throw new EmailAlreadyInUseError();
+    throw error;
+  }
 }

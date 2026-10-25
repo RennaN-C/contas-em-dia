@@ -26,12 +26,13 @@ export function Messages() {
       const result = await messagesApi.read(id);
       setRows(items => items.map(m => m.id === id ? result.message : m));
       setFeedback('Mensagem marcada como lida.');
+      window.dispatchEvent(new Event('saldo:messages-changed'));
     } catch (e) { setReadError((e as Error).message); }
     finally { setBusy(ids => ids.filter(item => item !== id)); }
   }
   const visible = rows.filter(m => filter === 'all' || (filter === 'unread' ? !m.lida : m.lida));
   return <section aria-labelledby="messages-title">
-    <h2 id="messages-title">Mensagens e avisos</h2>
+    <h2 id="messages-title">Mensagens e avisos <span className="count-pill">{rows.filter(m => !m.lida).length} não lida(s)</span></h2>
     <div className="finance-actions"><label>Exibir mensagens<select value={filter} onChange={e => setFilter(e.target.value)}><option value="all">Todas</option><option value="unread">Não lidas</option><option value="read">Lidas</option></select></label></div>
     <p role="status" aria-live="polite">{feedback}</p>
     {readError && <p role="alert">{readError} Tente marcar a mensagem novamente.</p>}
@@ -42,5 +43,10 @@ export function Messages() {
         <p><time dateTime={m.criadoEm}>{displayDate(m.criadoEm)}</time>{m.conta && <> · Conta: <Link to="/contas">{m.conta.descricao}</Link> · Vencimento: {displayDate(m.conta.vencimento)}</>}</p>
         {!m.lida && <button disabled={busy.includes(m.id)} onClick={() => read(m.id)} aria-label={`Marcar como lida: ${m.titulo}`}>{busy.includes(m.id) ? 'Salvando…' : 'Marcar como lida'}</button>}
       </li>)}</ul>}
+    {!loading && !error && rows.some(m => !m.lida) && <button disabled={busy.length > 0} onClick={async () => {
+      setBusy(['all']); setReadError('');
+      try { await messagesApi.readAll(); setRows(items => items.map(m => ({...m,lida:true}))); setFeedback('Todas as mensagens foram marcadas como lidas.'); window.dispatchEvent(new Event('saldo:messages-changed')); }
+      catch(e) { setReadError((e as Error).message); } finally { setBusy([]); }
+    }}>Marcar todas como lidas</button>}
   </section>;
 }

@@ -6,8 +6,8 @@ const emailSchema = z.string().trim().email("E-mail inválido").transform((value
 export const registerUserSchema = z.object({
   nome: nomeSchema,
   email: emailSchema,
-  senha: z.string().min(8, "Senha deve ter pelo menos 8 caracteres").max(72)
-});
+  senha: z.string().min(8, "Senha deve ter pelo menos 8 caracteres").max(72).refine(value => Buffer.byteLength(value, 'utf8') <= 72, 'Senha deve ter no máximo 72 bytes UTF-8')
+}).strict();
 
 export type RegisterUserInput = z.infer<typeof registerUserSchema>;
 

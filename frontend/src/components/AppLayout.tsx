@@ -3,10 +3,16 @@ import { Link, NavLink, Outlet } from "react-router";
 import { Brand, Icon } from './Icon';
 import { useAuth } from "../features/auth/useAuth";
 import { navigationItems } from "./navigation";
+import { useUnreadMessages } from '../hooks/useUnreadMessages';
+import {PreferencesProvider} from '../features/auth/PreferencesProvider';
 
 export function AppLayout() {
+ return <PreferencesProvider><LayoutContent/></PreferencesProvider>;
+}
+function LayoutContent() {
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const unread = useUnreadMessages();
 
   return (
     <div className="layout">
@@ -32,11 +38,13 @@ export function AppLayout() {
               <li key={item.to}>
                 <NavLink
                   to={item.to}
+                  aria-label={item.label}
+                  aria-describedby={item.to === '/avisos' && unread > 0 ? 'unread-description' : undefined}
                   end={item.to === "/"}
                   className="layout-nav-link"
                   onClick={() => setMenuOpen(false)}
                 >
-                  <Icon name={({'/':'home','/contas':'wallet','/pagamentos':'payment','/avisos':'bell','/perfil':'user'} as Record<string,string>)[item.to] ?? 'home'}/>{item.label}
+                  <Icon name={({'/':'home','/contas':'wallet','/pagamentos':'payment','/avisos':'bell','/perfil':'user','/configuracoes':'settings'} as Record<string,string>)[item.to] ?? 'home'}/>{item.label}{item.to === '/avisos' && unread > 0 && <span id="unread-description" className="unread-badge" aria-label={`${unread} mensagens não lidas`}>{unread}</span>}
                 </NavLink>
               </li>
             ))}

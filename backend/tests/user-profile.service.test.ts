@@ -56,6 +56,10 @@ describe("getProfile", () => {
 });
 
 describe("updateProfile", () => {
+  it('converte conflito concorrente de e-mail em erro de domínio', async () => {
+    const repository=makeRepository({update:vi.fn().mockRejectedValue({code:'P2002'})});
+    await expect(updateProfile('user-1',{email:'novo@example.org'},repository)).rejects.toBeInstanceOf(EmailAlreadyInUseError);
+  });
   it("atualiza nome e e-mail do próprio usuário", async () => {
     const repository = makeRepository();
 

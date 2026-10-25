@@ -1,4 +1,6 @@
 import bcrypt from "bcryptjs";
+// Valid dummy hash keeps missing-user attempts on the same bcrypt work path.
+const MISSING_USER_HASH = '$2b$12$yPbBlHQcH4TkxoBbyqfb2./KgXSO9deuI.13GVOIvpc7US2WHFRy.';
 import type { LoginInput } from "./auth.schema.js";
 import {
   userRepository,
@@ -24,13 +26,9 @@ export async function authenticateUser(
 ): Promise<AuthenticatedUser> {
   const user = await repository.findByEmail(input.email);
 
-  if (!user) {
-    throw new InvalidCredentialsError();
-  }
+  const passwordMatches = await bcrypt.compare(input.senha, user?.senhaHash ?? MISSING_USER_HASH);
 
-  const passwordMatches = await bcrypt.compare(input.senha, user.senhaHash);
-
-  if (!passwordMatches) {
+  if (!user || !passwordMatches) {
     throw new InvalidCredentialsError();
   }
 

@@ -1,5 +1,8 @@
 # Relatório de validação — Saldo +
 
+> Registro histórico da entrega #35. A revisão de apresentação local e os
+> resultados atuais estão em [relatorio-apresentacao-local.md](relatorio-apresentacao-local.md).
+
 Data: 25/10/2026, America/Sao_Paulo. Responsável: Rennan.
 PR: [#35](https://github.com/RennaN-C/contas-em-dia/pull/35), destino `develop`.
 

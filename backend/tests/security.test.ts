@@ -1,0 +1,17 @@
+import express from 'express';
+import request from 'supertest';
+import jwt from 'jsonwebtoken';
+import { expect,it } from 'vitest';
+import { app } from '../src/app.js';
+import { authRateLimit } from '../src/middlewares/security.js';
+import { registerUserSchema } from '../src/modules/users/user.schema.js';
+import { verifyAccessToken } from '../src/modules/auth/token.service.js';
+it('envia headers de segurança e não revela Express',async()=>{const r=await request(app).get('/api/health');expect(r.headers['x-powered-by']).toBeUndefined();expect(r.headers['x-content-type-options']).toBe('nosniff');expect(r.headers['x-frame-options']).toBe('SAMEORIGIN');expect(r.headers['cache-control']).toBe('no-store');});
+it('CORS rejeita origem desconhecida',async()=>expect((await request(app).get('/api/health').set('Origin','https://invasor.example')).status).toBe(403));
+it('CORS permite frontend local configurado',async()=>{const r=await request(app).get('/api/health').set('Origin','http://localhost:5174');expect(r.status).toBe(200);expect(r.headers['access-control-allow-origin']).toBe('http://localhost:5174');});
+it('JSON malformado recebe erro consistente sem stack HTML',async()=>{const r=await request(app).post('/api/auth/login').set('Content-Type','application/json').send('{');expect(r.status).toBe(400);expect(r.body).toEqual({message:'JSON inválido'});});
+it('payload excessivo recebe 413',async()=>expect((await request(app).post('/api/auth/register').send({nome:'a'.repeat(20_000)})).status).toBe(413));
+it('rotas ausentes retornam JSON',async()=>{const r=await request(app).get('/api/inexistente');expect(r.status).toBe(404);expect(r.body.message).toBe('Rota não encontrada');});
+it('bloqueia tentativas repetidas e informa limite',async()=>{const a=express();a.use(authRateLimit(2));a.post('/',(_r,s)=>s.status(401).json({message:'inválido'}));expect((await request(a).post('/')).status).toBe(401);expect((await request(a).post('/')).status).toBe(401);const r=await request(a).post('/');expect(r.status).toBe(429);expect(r.headers['ratelimit']).toBeTruthy();});
+it('não aceita algoritmo JWT diferente de HS256',()=>{const token=jwt.sign({sub:'owner'},'segredo-longo',{algorithm:'HS512'});expect(()=>verifyAccessToken(token,'segredo-longo')).toThrow('Token inválido');});
+it('cadastro recusa campos extras e senha acima de 72 bytes UTF-8',()=>{expect(registerUserSchema.safeParse({nome:'Teste',email:'a@example.org',senha:'a'.repeat(8),role:'admin'}).success).toBe(false);expect(registerUserSchema.safeParse({nome:'Teste',email:'a@example.org',senha:'á'.repeat(40)}).success).toBe(false);});

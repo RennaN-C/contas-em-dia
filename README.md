@@ -8,7 +8,7 @@ de avisos. Gráficos usam dados reais da API e oferecem tabela de valores;
 animações respeitam a preferência de movimento reduzido. A identidade visual
 foi atualizada sem alterar a stack ou invalidar as sessões existentes.
 
-Consulte o [relatório de validação como usuário](docs/relatorio-validacao-saldo-plus.md)
+Consulte o [relatório atual de juros, pagamentos e modais](docs/relatorio-pagamentos-modais.md)
 para resultados, screenshots desktop/mobile e reprodução do fluxo no Chrome.
 
 ## Stack
@@ -34,8 +34,8 @@ A divisão de responsabilidades e a estrutura obrigatória do projeto estão em 
 
 1. Copie `backend/.env.example` para `backend/.env` e `frontend/.env.example` para `frontend/.env`.
 2. Execute `docker compose up -d db`.
-3. Instale as dependências com `npm install` em `backend/` e `frontend/`.
-4. No backend, execute `npx prisma migrate dev` e depois `npm run dev`.
+3. Instale as dependências com `npm ci` em `backend/` e `frontend/` (Node 24 recomendado).
+4. No backend, execute `npx prisma generate`, `npx prisma migrate deploy` e depois `npm run dev`.
 5. No frontend, execute `npm run dev`.
 
 ## Contas e pagamentos (Marcelo — #10–#21)
@@ -58,8 +58,9 @@ Cadastro/edição: `{ "descricao": "Aluguel", "valor": 1000.50,
 "vencimento": "2026-10-31", "tipo": "RECORRENTE", "recorrencia": "MENSAL" }`.
 Para `AVULSA`, envie recorrência nula. Valores positivos com até duas casas;
 limite de 200 caracteres na descrição. Datas civis são `AAAA-MM-DD`, interpretadas
-em UTC. O dia do vencimento inteiro permanece pendente; atraso começa no dia
-seguinte em UTC. `status` é calculado no backend a cada leitura: total pago
+como marcadores UTC, sem alterar o dia informado. A data atual é determinada em
+`America/Sao_Paulo`: atraso começa à meia-noite de Brasília do dia seguinte.
+`status` é calculado no backend a cada leitura: total pago
 igual ao valor resulta em PAGA, independentemente da data. Pagamentos parciais
 mantêm PENDENTE/ATRASADA pelo vencimento. Filtros aceitam PENDENTE/PAGA/ATRASADA.
 
@@ -69,11 +70,13 @@ o pagamento existente; conteúdo diferente retorna 409. Não reutilize uma chave
 para outra operação. O frontend mantém a chave durante tentativas do mesmo envio.
 Datas futuras, valores não positivos e pagamentos acima do saldo são rejeitados.
 
-A próxima competência mensal é criada **na quitação integral**, na mesma
-transação do pagamento, nunca por leitura nem por job. Uma origem possui no
-máximo um próximo lançamento (índice único). O dia original é preservado:
-31/jan → 28 ou 29/fev → 31/mar. Cada lançamento tem seus próprios pagamentos;
-quitar o próximo gera mais um mês. Edições não propagam retroativamente.
+A previsão recorrente é criada **sem depender do pagamento**, no cadastro e na
+materialização diária/recuperação, até o fim do próximo mês. A quitação também
+assegura o próximo lançamento se a série estiver ativa. O índice único de origem
+evita duplicidade entre esses caminhos. O dia original é preservado:
+31/jan → 28 ou 29/fev → 31/mar. Cada lançamento tem seus próprios pagamentos.
+É possível pausar/retomar toda a série; pausar preserva os lançamentos e pagamentos
+já existentes. Edições de valor/descrição afetam somente o lançamento editado.
 Vencimento/tipo de séries iniciadas ficam protegidos; contas quitadas recorrentes
 não podem ser editadas. Contas com pagamentos não são excluídas, preservando o
 histórico. Exclusão de avulsas sem pagamentos utiliza as relações já existentes
@@ -84,7 +87,7 @@ ser repetido com a **mesma chave**.
 ### Instalação, banco e validação
 
 Use Node 24 (ou versão compatível com Vite 7) e PostgreSQL 15. Instale com
-`npm install` em cada pacote (o repositório ainda não versiona lockfiles).
+`npm ci` em cada pacote; lockfiles são versionados para reproduzir as instalações.
 Copie os `.env.example` apenas se o `.env` não existir; use uma chave JWT própria.
 Execute `docker compose up -d db`. Em `backend/`, execute:
 
@@ -135,7 +138,8 @@ consulta da Selic mantém as mensagens e o resumo disponíveis.
 ### Endpoints autenticados
 
 Todas as rotas exigem o JWT existente. O usuário vem exclusivamente do token.
-Não existem endpoints HTTP para disparar jobs ou criar mensagens arbitrárias.
+Não existem endpoints públicos para disparar jobs globais ou criar mensagens arbitrárias.
+O botão de atualização processa somente os dados do usuário autenticado.
 
 | Método | Rota | Resposta |
 | --- | --- | --- |
@@ -144,6 +148,13 @@ Não existem endpoints HTTP para disparar jobs ou criar mensagens arbitrárias.
 | PATCH | `/api/messages/:id/read` | `{ message }`, persiste `lida: true`; repetir é seguro |
 | GET | `/api/notifications/weekly-summary` | `{ summary: { inicio, fimExclusivo, accounts, total } }` |
 | GET | `/api/notifications/interest-estimates` | `{ aviso, estimates }`, apenas contas atrasadas com saldo |
+| POST | `/api/notifications/refresh` | Atualiza previsões, avisos e resumo somente do usuário autenticado |
+| GET | `/api/messages/summary` | `{ unread }`, contador de mensagens não lidas |
+| PATCH | `/api/messages/read-all` | `{ updated }`, marca somente mensagens do usuário como lidas |
+| POST | `/api/accounts/recurrences/sync` | `{ created }`, prevê competências do usuário até o próximo mês |
+| PATCH | `/api/accounts/:id/recurrence` | Corpo `{ ativa: boolean }`, pausa/retoma a série inteira |
+| GET | `/api/users/me/preferences` | Preferências de ordenação, revisão de pagamento e movimento reduzido |
+| PUT | `/api/users/me/preferences` | Atualiza preferências somente do usuário autenticado |
 
 Leitura de mensagem alheia ou inexistente retorna 404; UUID inválido retorna 400.
 Mensagens contêm `tipo` (`AVISO` ou `RESUMO_SEMANAL`), `titulo`, `conteudo`,
@@ -159,15 +170,16 @@ tarefas. Execute `npm run dev` ou `npm run build` seguido de `npm start` no back
 
 | Job | Expressão node-cron | Timezone | Horário em America/Sao_Paulo (UTC−3) |
 | --- | --- | --- | --- |
-| Avisos diários | `0 9 * * *` | `UTC` | Todos os dias, 06:00 |
-| Resumo semanal | `5 9 * * 1` | `UTC` | Segunda-feira, 06:05 |
+| Avisos diários | `0 6 * * *` | `America/Sao_Paulo` | Todos os dias, 06:00 |
+| Resumo semanal | `5 6 * * 1` | `America/Sao_Paulo` | Segunda-feira, 06:05 |
+| Recuperação | `*/15 * * * *` | `America/Sao_Paulo` | Na inicialização e a cada 15 minutos |
 
-Regras usam datas civis **UTC**, como contas/pagamentos: avisos nos dias D−3,
-D−1 e D, sem depender do timezone do host. Dia inteiro do vencimento não conta
-como atraso. Resumo consulta `[hoje UTC, hoje UTC + 7 dias)`, incluindo hoje e
+Regras usam o calendário de **Brasília**, mantendo vencimentos/pagamentos como
+marcadores UTC: avisos nos dias D−3, D−1 e D, sem depender do timezone do host.
+Dia inteiro do vencimento não conta como atraso. Resumo consulta `[hoje, hoje + 7 dias)`, incluindo hoje e
 mais seis datas; exclui contas integralmente pagas. Exibe saldo pendente,
 descrição e vencimento de cada conta. A semana da chave de idempotência começa
-na segunda-feira UTC; uma reexecução na mesma semana preserva o primeiro resumo.
+na segunda-feira do calendário brasileiro; uma reexecução na mesma semana preserva o primeiro resumo.
 Uma mensagem vazia informa quando não há contas elegíveis.
 
 Saldo é calculado dos pagamentos, reutilizando as funções de contas, sem confiar
@@ -181,33 +193,42 @@ Transações repetem até três tentativas em conflito transitório/deadlock.
 múltiplas instâncias. Falhas individuais não impedem o processamento dos demais
 itens; são agregadas e registradas sem encerrar a API.
 
-O node-cron precisa do processo ativo e não recupera automaticamente horários
-perdidos. Para recuperar ou repetir uma execução, use no backend (com `.env`
-configurado) os comandos abaixo; omitir a data usa o dia UTC atual:
+O node-cron precisa do processo ativo. A recuperação persistida reprocessa hoje
+e os sete dias anteriores pendentes ao iniciar e a cada 15 minutos; marcadores
+são gravados somente após sucesso. Hoje e a semana atual são revisados para
+incluir contas/usuários novos. Para recuperar ou repetir uma execução, use no
+backend (com `.env`) os comandos abaixo; omitir a data usa o dia atual em Brasília:
 
 ```sh
 npm run job:daily -- 2026-10-25
 npm run job:weekly -- 2026-10-26
+npm run job:recover
 ```
 
 Repetir a mesma data não duplica mensagens. O comando encerra com código 1 se
-houver falha, permitindo uma nova tentativa operacional. Não altera recorrência
-nem cria competências futuras: isso continua sendo responsabilidade da quitação.
+houver falha, permitindo uma nova tentativa operacional. A recuperação e o job
+diário também materializam recorrências ativas sem depender da quitação.
 
 ### Selic e fórmula demonstrativa
 
 Somente o backend consulta
 [`GET https://brasilapi.com.br/api/taxas/v1/Selic`](https://brasilapi.com.br/docs#tag/Taxas),
-em cliente isolado. O contrato validado por Zod é `{ nome: "Selic", valor: number }`,
-com taxa finita e não negativa. Timeout de 5 segundos cobre conexão e leitura
-do JSON; HTTP não OK, JSON/contrato inválido, timeout e erro de rede retornam
-`status: "indisponivel"`. Nesse estado, cada estimativa mantém saldo e dias,
-mas **omite taxa, juros e total**, sem inventar uma taxa alternativa.
-Consulta uma vez por requisição de estimativas e somente se houver atraso.
+em cliente isolado. Zod aceita `nome` Selic/SELIC e valor numérico finito não
+negativo. Se falhar, consulta a [meta Selic anual do Banco Central, série SGS 432](https://dadosabertos.bcb.gov.br/dataset/432-taxa-de-juros---meta-selic-definida-pelo-copom).
+Cada fonte tem timeout de 5 segundos cobrindo resposta e corpo. O fallback
+busca os últimos 14 dias e rejeita datas inválidas/futuras. A fonte é informada
+na interface; meta Selic não é a taxa efetiva diária.
+
+Taxas válidas ficam em cache PostgreSQL por uma hora, com fonte, referência e
+data de consulta. Buscas simultâneas no processo compartilham a consulta. Se ambas
+as fontes falharem, usa a última taxa válida de até sete dias **com aviso explícito
+de desatualização**; depois desse prazo retorna `indisponivel`, mantendo saldo/dias
+e omitindo taxa/juros/total. Não há taxa fictícia de fallback. Não consulta fontes
+externas se não houver conta atrasada com saldo.
 
 ```text
 saldo = max(0, valor da conta − soma dos pagamentos)
-dias = max(0, data civil UTC atual − data civil UTC de vencimento)
+dias = max(0, data civil atual em Brasília − data civil de vencimento)
 juros = arredondar_centavos(saldo × (Selic anual / 100) × dias / 365)
 valorEstimado = saldo + juros
 ```
@@ -260,3 +281,85 @@ npm test
 As variáveis desses comandos são somente para teste. As suítes integradas
 removem apenas seus próprios usuários e registros, e não devem rodar no banco
 de desenvolvimento/produção. Não dependem da disponibilidade da BrasilAPI.
+
+## Preparar uma apresentação local
+
+Com o banco migrado, configure `DEMO_EMAIL` e `DEMO_PASSWORD` apenas no
+`backend/.env` e execute `npm run demo` no backend. O comando prepara um usuário
+dedicado com contas avulsas/recorrentes, pagamentos parciais, quitação, avisos e
+resumo. Pode ser repetido sem apagar dados; recusa execução em produção e não
+altera contas pessoais. Credenciais não são versionadas.
+
+Para portas ocupadas, inicie o frontend com `npm run dev -- --port 5174` e
+configure a porta do banco na `DATABASE_URL`. API e frontend devem estar
+apontando para o mesmo ambiente. Nesta preparação local, o frontend está em
+`http://localhost:5174`, API na porta 3000 e PostgreSQL na porta 55433.
+
+## Segurança e qualidade
+
+- Helmet, remoção de `X-Powered-By`, respostas sem cache de dados pessoais,
+  corpo JSON limitado a 16 KiB e erros JSON sem stack para o cliente.
+- CORS restrito a `CORS_ORIGINS`; não usar `*`. `TRUST_PROXY_HOPS` é 0 por
+  padrão; somente configure o número exato de proxies controlados na hospedagem.
+- Limite por IP: 30 falhas de autenticação a cada 15 minutos e 600 requisições
+  de API por 15 minutos. Os limites são locais ao processo; não equivalem a
+  proteção distribuída contra ataques em uma hospedagem com múltiplas réplicas.
+- Senhas bcrypt, até 72 bytes UTF-8; confirmação no frontend, controle de
+  visibilidade e validação estrita no backend. Tentativas com usuário inexistente
+  também passam por bcrypt; erros de credenciais têm mensagem única.
+- JWT HS256 explícito, novos tokens válidos por 8 horas e dados sempre filtrados
+  pelo usuário do token. Em produção, segredo aleatório de pelo menos 32 caracteres
+  é obrigatório; TLS deve ser fornecido pela hospedagem/proxy.
+- Perfil pode ser editado; conflito concorrente de e-mail retorna 409. CSV de
+  pagamentos exporta apenas dados autenticados e neutraliza fórmulas de planilha.
+- Lockfiles versionados, `npm ci`, Vitest atualizado e auditoria npm nos dois
+  pacotes. Nenhuma vulnerabilidade apontada na auditoria executada nesta revisão.
+- GitHub Actions executa builds, testes, auditoria e migrações PostgreSQL em
+  banco descartável a cada PR para `develop`/`main` e pushes nessas branches.
+
+`20261025020000_apresentacao_resiliencia` adiciona somente estado de pausa da
+recorrência, cache de taxa e marcadores de recuperação; não remove dados.
+
+### Hospedagem futura
+
+O escopo confirmado é a apresentação local. Para um provedor que suspende o
+backend, configure um agendador independente para executar
+`node dist/src/jobs/run.js recover` a cada 15 minutos, com a mesma `DATABASE_URL`.
+A recuperação não consegue executar enquanto nenhum processo é iniciado e cobre
+até sete dias de interrupção. Não existe endpoint administrativo público de cron.
+Sem provedor configurado, não há validação de execução remota nem deploy nesta entrega.
+
+Configuração de percentuais contratuais por conta e recuperação de senha por e-mail continuam
+fora desta entrega. A simulação com Selic é demonstrativa e não cria cobranças.
+
+## Pagamentos com juros visíveis e modais
+
+Na página **Contas**, cada cartão atrasado apresenta dias de atraso, juros e
+total estimados, taxa/fonte e estado de consulta. **Pagar**, **Editar** e
+**Pagamentos** ficam alinhados; ações de série/exclusão são secundárias.
+Cadastro, edição, pagamento, histórico e confirmação de exclusão abrem em modal
+central com foco contido, Escape, bloqueio do fundo e retorno ao botão de origem.
+
+Ao pagar, o modal mostra o principal e a estimativa de atraso. A preferência
+padrão solicita revisão antes da gravação. O valor da simulação **não é somado
+automaticamente ao débito nem ao pagamento**. Se foram cobrados juros/multa reais,
+marque **Também paguei encargos** e informe o valor efetivamente pago.
+
+`POST /api/accounts/:id/payments` aceita adicionalmente `encargos` opcional
+(não negativo, até duas casas; padrão zero). `valor` continua sendo o principal
+amortizado e não pode superar o saldo. O histórico, registro detalhado, CSV e
+indicadores discriminam principal, encargos e total pago. A chave de idempotência
+inclui o valor dos encargos na comparação do payload.
+
+Após gravar, é possível **Consultar histórico** ou concluir. Em **Pagamentos**,
+**Ver registro** abre os detalhes de cada pagamento. Trata-se do registro interno
+do sistema; não há emissão de comprovante bancário.
+
+Em **Configurações**, ordenação de contas, revisão antes de pagar e redução de
+animações são persistidas por usuário. Moeda, calendário e critérios financeiros
+são exibidos como referências. **Perfil** tem resumo pessoal e edição em modal;
+o cadastro apresenta orientações de senha e confirmação.
+
+Migração aditiva `20261025030000_preferencias_encargos`: acrescenta encargos
+(zero nos pagamentos anteriores) e preferências por usuário, sem recalcular ou
+remover histórico existente.

@@ -80,6 +80,7 @@ describe.skipIf(process.env.RUN_DATABASE_TESTS !== '1')('avisos e mensagens no P
     expect(r.body.notifications.some((n: { contaId: string }) => n.contaId === ids.foreign)).toBe(false);
   });
   it('juros reais sobre saldo parcial com BrasilAPI mockada', async () => {
+    await prisma.taxaReferencia.deleteMany({ where: { chave: 'SELIC' } });
     const fetcher = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{"nome":"Selic","valor":15}'));
     try {
       const r = await listInterestEstimates(owner, now);

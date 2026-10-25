@@ -3,13 +3,13 @@ import { prisma } from '../../lib/prisma.js';
 import { accountStatus, cents } from '../accounts/accounts.service.js';
 import { persistMessage } from '../messages/messages.service.js';
 import { transaction } from '../../jobs/transaction.js';
-import { addDays, utcDay } from './dates.js';
+import { addDays, utcDay, businessDay } from './dates.js';
 
 export const ALERT_RULES = [{ days: 3, tipo: 'TRES_DIAS' }, { days: 1, tipo: 'VESPERA' }, { days: 0, tipo: 'VENCIMENTO' }] as const;
 
-export async function processNotifications(now = new Date()) {
+export async function processNotifications(now = businessDay(), usuarioId?: string) {
   const day = utcDay(now);
-  const candidates = await prisma.conta.findMany({ where: { OR: ALERT_RULES.map(r => ({ vencimento: { gte: addDays(day, r.days), lt: addDays(day, r.days + 1) } })) }, select: { id: true }, orderBy: { id: 'asc' } });
+  const candidates = await prisma.conta.findMany({ where: { ...(usuarioId ? { usuarioId } : {}), OR: ALERT_RULES.map(r => ({ vencimento: { gte: addDays(day, r.days), lt: addDays(day, r.days + 1) } })) }, select: { id: true }, orderBy: { id: 'asc' } });
   const failures: unknown[] = [];
   for (const candidate of candidates) {
     try {

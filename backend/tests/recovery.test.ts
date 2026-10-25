@@ -1,0 +1,16 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+const {db}=vi.hoisted(()=>({db:{execucaoJob:{findUnique:vi.fn(),upsert:vi.fn()},$transaction:vi.fn()}}));
+vi.mock('../src/lib/prisma.js',()=>({prisma:db}));
+vi.mock('../src/modules/notifications/notifications.service.js',()=>({processNotifications:vi.fn()}));
+vi.mock('../src/modules/messages/messages.service.js',()=>({processWeeklySummaries:vi.fn()}));
+vi.mock('../src/modules/accounts/recurrence.service.js',()=>({materializeRecurrences:vi.fn()}));
+import {recoverJobs} from '../src/jobs/recovery.js';
+import {processNotifications} from '../src/modules/notifications/notifications.service.js';
+import {processWeeklySummaries} from '../src/modules/messages/messages.service.js';
+import {materializeRecurrences} from '../src/modules/accounts/recurrence.service.js';
+const now=new Date('2026-10-25');
+beforeEach(()=>{vi.resetAllMocks();db.$transaction.mockImplementation(fn=>fn(db));});
+it('recupera hoje e sete dias anteriores e registra conclusão',async()=>{await recoverJobs(now);expect(materializeRecurrences).toHaveBeenCalledWith(now);expect(processNotifications).toHaveBeenCalledTimes(8);expect(processWeeklySummaries).toHaveBeenCalledWith(now);expect(db.execucaoJob.upsert).toHaveBeenCalledTimes(9);});
+it('pula dias antigos concluídos, mas reprocessa hoje e a semana para novos usuários',async()=>{db.execucaoJob.findUnique.mockResolvedValue({chave:'done'});await recoverJobs(now);expect(processNotifications).toHaveBeenCalledOnce();expect(processNotifications).toHaveBeenCalledWith(now);expect(processWeeklySummaries).toHaveBeenCalledOnce();});
+it('falha não é registrada como conclusão e permite recuperação',async()=>{vi.mocked(processNotifications).mockRejectedValueOnce(new Error('falhou'));await expect(recoverJobs(now)).rejects.toThrow('falhou');expect(db.execucaoJob.upsert).not.toHaveBeenCalled();await expect(recoverJobs(now)).resolves.toBeUndefined();});
+it('falha semanal preserva marcadores diários e permite nova tentativa semanal',async()=>{vi.mocked(processWeeklySummaries).mockRejectedValueOnce(new Error('semanal'));await expect(recoverJobs(now)).rejects.toThrow('semanal');expect(db.execucaoJob.upsert.mock.calls.every(call=>call[0].where.chave.startsWith('daily:'))).toBe(true);});

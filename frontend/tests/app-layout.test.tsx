@@ -71,7 +71,8 @@ describe("AppLayout", () => {
       ["Contas", "/contas"],
       ["Pagamentos", "/pagamentos"],
       ["Avisos", "/avisos"],
-      ["Perfil", "/perfil"]
+      ["Perfil", "/perfil"],
+      ["Configurações", "/configuracoes"]
     ]);
     expect(container.textContent).toContain("marlon@example.com");
   });

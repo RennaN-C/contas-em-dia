@@ -30,7 +30,7 @@ it('loading nas três consultas independentes', async () => {
 });
 it('exibe mensagens, conta e destaque textual de não lida', async () => {
   vi.mocked(messagesApi.list).mockResolvedValue({ messages: [message] }); await render();
-  expect(container.querySelector('.message-unread')).toBeTruthy(); expect(container.textContent).toContain('Não lida'); expect(container.textContent).toContain('25/10/2026'); expect(container.querySelector('a')?.textContent).toBe('Aluguel');
+  expect(container.querySelector('.message-unread')).toBeTruthy(); expect(container.textContent).toContain('Não lida'); expect(container.textContent).toContain('25/10/2026'); expect(container.querySelector('.message-card a')?.textContent).toBe('Aluguel');
 });
 it('marca leitura pela API e anuncia sucesso', async () => {
   vi.mocked(messagesApi.list).mockResolvedValue({ messages: [message] }); vi.mocked(messagesApi.read).mockResolvedValue({ message: { ...message, lida: true } });

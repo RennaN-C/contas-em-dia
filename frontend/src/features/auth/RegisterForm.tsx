@@ -16,6 +16,8 @@ export function RegisterForm() {
   const [formError, setFormError] = useState<string | null>(null);
   const [registeredName, setRegisteredName] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [confirmation,setConfirmation]=useState('');
+  const [showPassword,setShowPassword]=useState(false);
 
   function updateField(field: keyof RegisterInput, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
@@ -27,6 +29,7 @@ export function RegisterForm() {
     setFormError(null);
 
     const validationErrors = validateRegisterForm(values);
+    if (confirmation !== values.senha) validationErrors.senha = 'As senhas devem ser iguais';
     setErrors(validationErrors);
 
     if (Object.keys(validationErrors).length > 0) {
@@ -44,6 +47,7 @@ export function RegisterForm() {
 
       setRegisteredName(user.nome);
       setValues(initialValues);
+      setConfirmation('');
     } catch (error) {
       if (error instanceof ApiError) {
         const apiErrors = registerErrorsFromApi(error);
@@ -74,6 +78,7 @@ export function RegisterForm() {
 
   return (
     <form className="form" onSubmit={handleSubmit} noValidate>
+      <div className="registration-steps" aria-label="Etapas do cadastro"><span className="active">1 · Seus dados</span><span>2 · Acessar o painel</span></div>
       {formError && (
         <div className="alert alert-error" role="alert">
           {formError}
@@ -122,7 +127,7 @@ export function RegisterForm() {
         <input
           id="register-senha"
           name="senha"
-          type="password"
+          type={showPassword?'text':'password'}
           autoComplete="new-password"
           value={values.senha}
           onChange={(event) => updateField("senha", event.target.value)}
@@ -140,9 +145,14 @@ export function RegisterForm() {
         )}
       </div>
 
+      <div className="field"><label htmlFor="register-confirmation">Confirmar senha</label><input id="register-confirmation" type={showPassword?'text':'password'} autoComplete="new-password" value={confirmation} onChange={e=>{setConfirmation(e.target.value);setErrors(current=>({...current,senha:undefined}));}} required aria-invalid={!!errors.senha} aria-describedby={errors.senha?'register-senha-error':undefined}/></div>
+      {values.senha&&<div className="password-guidance"><span className={values.senha.length>=8?'complete':''}>{values.senha.length>=8?'✓':'○'} Pelo menos 8 caracteres</span><span className={confirmation===values.senha?'complete':''}>{confirmation===values.senha?'✓':'○'} Confirmação igual à senha</span></div>}
+      <button className="password-toggle" type="button" aria-pressed={showPassword} onClick={()=>setShowPassword(v=>!v)}>{showPassword?'Ocultar senhas':'Mostrar senhas'}</button>
+
       <button className="button" type="submit" disabled={submitting}>
         {submitting ? "Cadastrando..." : "Criar conta"}
       </button>
+      <p className="registration-privacy">Você começa com seu próprio espaço: contas, pagamentos e mensagens ficam vinculados ao seu acesso.</p>
     </form>
   );
 }

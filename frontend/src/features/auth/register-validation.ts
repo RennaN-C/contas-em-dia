@@ -33,8 +33,8 @@ export function validateRegisterForm(input: RegisterInput): RegisterErrors {
     errors.senha = "Informe uma senha";
   } else if (input.senha.length < 8) {
     errors.senha = "Senha deve ter pelo menos 8 caracteres";
-  } else if (input.senha.length > 72) {
-    errors.senha = "Senha deve ter no máximo 72 caracteres";
+  } else if (input.senha.length > 72 || new TextEncoder().encode(input.senha).length > 72) {
+    errors.senha = "Senha deve ter no máximo 72 caracteres e 72 bytes UTF-8";
   }
 
   return errors;
