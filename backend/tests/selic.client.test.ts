@@ -1,6 +1,9 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { fetchSelic, SELIC_URL } from '../src/integrations/brasil-api/selic.client.js';
 afterEach(() => vi.useRealTimers());
+it('aceita o nome SELIC em maiúsculas retornado pela API real', async () => {
+  expect(await fetchSelic(vi.fn<typeof fetch>().mockResolvedValue(new Response('{"nome":"SELIC","valor":13.75}')))).toEqual({status:'disponivel',taxaAnual:13.75});
+});
 it('valida contrato e endpoint Selic', async () => {
   const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ nome: 'Selic', valor: 15 })));
   expect(await fetchSelic(fetcher)).toEqual({ status: 'disponivel', taxaAnual: 15 });

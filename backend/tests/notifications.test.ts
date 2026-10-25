@@ -9,11 +9,11 @@ const { db } = vi.hoisted(() => ({ db: {
 } }));
 vi.mock('../src/lib/prisma.js', () => ({ prisma: db }));
 vi.mock('../src/config/env.js', () => ({ env: { JWT_SECRET: 'secret-test-long-enough' } }));
-vi.mock('../src/integrations/brasil-api/selic.client.js', () => ({ fetchSelic: vi.fn() }));
+vi.mock('../src/integrations/brasil-api/rate.service.js', () => ({ getAnnualSelic: vi.fn() }));
 import { processNotifications } from '../src/modules/notifications/notifications.service.js';
 import { listMessages, markRead, processWeeklySummaries, weeklySummary } from '../src/modules/messages/messages.service.js';
 import { estimateInterest, listInterestEstimates } from '../src/modules/notifications/interest.service.js';
-import { fetchSelic } from '../src/integrations/brasil-api/selic.client.js';
+import { getAnnualSelic } from '../src/integrations/brasil-api/rate.service.js';
 import { notificationsRoutes } from '../src/modules/notifications/notifications.routes.js';
 import { messagesRoutes } from '../src/modules/messages/messages.routes.js';
 import { createAccessToken } from '../src/modules/auth/token.service.js';
@@ -153,20 +153,20 @@ describe('juros demonstrativos', () => {
   it.each([[0, '2026-01-01'], [100, '2026-10-25'], [100, '2026-10-26']])('sem juros saldo=%s vencimento=%s', (saldo, due) => expect(estimateInterest(Number(saldo), new Date(String(due)), 15, now).juros).toBe('0.00'));
   it('calcula só saldo parcial e consulta taxa uma vez', async () => {
     db.conta.findMany.mockResolvedValue([{ ...account, vencimento: new Date('2026-09-25'), pagamentos: [{ valor: 40 }] }, { ...account, vencimento: new Date('2026-09-25'), pagamentos: [{ valor: 100 }] }]);
-    vi.mocked(fetchSelic).mockResolvedValue({ status: 'disponivel', taxaAnual: 15 });
+    vi.mocked(getAnnualSelic).mockResolvedValue({ status: 'disponivel', taxaAnual: 15, fonte: 'Teste', consultadaEm: now.toISOString(), emCache: false, desatualizada: false });
     const result = await listInterestEstimates('owner', now);
     expect(result.estimates).toHaveLength(1); expect(result.estimates[0]).toMatchObject({ saldo: '60.00', juros: '0.74' });
-    expect(fetchSelic).toHaveBeenCalledOnce(); expect(result.aviso).toContain('Não é cobrança contratual');
+    expect(getAnnualSelic).toHaveBeenCalledOnce(); expect(result.aviso).toContain('Não é cobrança contratual');
   });
   it('falha externa retorna indisponível sem taxa ou valor inventado', async () => {
     db.conta.findMany.mockResolvedValue([{ ...account, vencimento: new Date('2026-09-25') }]);
-    vi.mocked(fetchSelic).mockResolvedValue({ status: 'indisponivel' });
+    vi.mocked(getAnnualSelic).mockResolvedValue({ status: 'indisponivel' });
     const result = await listInterestEstimates('owner', now);
     expect(result.estimates[0]).toMatchObject({ status: 'indisponivel' });
     expect(result.estimates[0]).not.toHaveProperty('taxaAnual'); expect(result.estimates[0]).not.toHaveProperty('juros');
   });
   it('não consulta BrasilAPI sem atraso', async () => {
-    expect((await listInterestEstimates('owner', now)).estimates).toEqual([]); expect(fetchSelic).not.toHaveBeenCalled();
+    expect((await listInterestEstimates('owner', now)).estimates).toEqual([]); expect(getAnnualSelic).not.toHaveBeenCalled();
   });
 });
 describe('transações e reexecução', () => {

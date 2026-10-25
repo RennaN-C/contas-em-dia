@@ -1,5 +1,5 @@
 {
-  "startedAt": "2026-10-25T20:05:53.321Z",
+  "startedAt": "2026-10-25T21:02:44.849Z",
   "browser": "Google Chrome",
   "isolated": true,
   "steps": [
@@ -7,6 +7,10 @@
       "name": "Acessibilidade automática: cadastro desktop",
       "status": "passed",
       "rulesPassed": 21
+    },
+    {
+      "name": "Cadastro impede confirmação de senha divergente",
+      "status": "passed"
     },
     {
       "name": "Cadastro real pelo formulário",
@@ -48,12 +52,14 @@
     {
       "name": "Consulta direta ao endpoint real da BrasilAPI registrada",
       "status": "passed",
-      "httpStatus": 500,
-      "body": "{\"message\":\"Parse error\",\"type\":\"internal_error\",\"name\":\"Error\"}"
+      "httpStatus": 200,
+      "body": "{\"nome\":\"SELIC\",\"valor\":13.75}"
     },
     {
-      "name": "BrasilAPI real indisponível: interface mantém saldo/dias sem inventar taxa",
-      "status": "passed"
+      "name": "BrasilAPI real: juros calculados somente sobre saldo parcial",
+      "status": "passed",
+      "rate": 13.75,
+      "interest": "0.68"
     },
     {
       "name": "Resumo semanal real inclui somente conta elegível",
@@ -62,7 +68,7 @@
     {
       "name": "Acessibilidade automática: avisos desktop",
       "status": "passed",
-      "rulesPassed": 25
+      "rulesPassed": 22
     },
     {
       "name": "Cenário controlado no Chrome: resposta simulada com 15% a.a., juros R$ 0,74 e total R$ 60,74",
@@ -71,12 +77,20 @@
     {
       "name": "Acessibilidade automática: pagamentos desktop",
       "status": "passed",
-      "rulesPassed": 19
+      "rulesPassed": 23
+    },
+    {
+      "name": "Exportação CSV real do histórico do usuário",
+      "status": "passed"
     },
     {
       "name": "Acessibilidade automática: perfil desktop",
       "status": "passed",
-      "rulesPassed": 21
+      "rulesPassed": 22
+    },
+    {
+      "name": "Edição de perfil persiste e atualiza sessão sem trocar o JWT",
+      "status": "passed"
     },
     {
       "name": "Navegação por pagamentos e perfil com dados reais",
@@ -94,7 +108,7 @@
     {
       "name": "Acessibilidade automática: avisos mobile 390px",
       "status": "passed",
-      "rulesPassed": 25
+      "rulesPassed": 22
     },
     {
       "name": "Acessibilidade automática: dashboard mobile 390px",
@@ -103,6 +117,22 @@
     },
     {
       "name": "Responsividade: menu funcional, sem overflow em 1440px, 390px e 320px",
+      "status": "passed"
+    },
+    {
+      "name": "Recorrência prevê próximo mês mesmo sem pagamento",
+      "status": "passed"
+    },
+    {
+      "name": "Pausa, retomada e sincronização sem duplicar mensalidades",
+      "status": "passed"
+    },
+    {
+      "name": "Atualização de avisos e leitura em lote zeram contador real",
+      "status": "passed"
+    },
+    {
+      "name": "Outro usuário não lista contas nem altera mensagens alheias",
       "status": "passed"
     },
     {
@@ -158,10 +188,12 @@
     "saldo-plus-mobile-dashboard.png"
   ],
   "brasilApi": {
-    "httpStatus": 500,
-    "body": "{\"message\":\"Parse error\",\"type\":\"internal_error\",\"name\":\"Error\"}"
+    "httpStatus": 200,
+    "body": "{\"nome\":\"SELIC\",\"valor\":13.75}"
   },
-  "realSelic": "indisponivel",
+  "realSelic": "disponivel",
+  "rateSource": "Banco Central · SGS 432",
+  "rateCached": true,
   "status": "passed",
-  "finishedAt": "2026-10-25T20:06:06.474Z"
+  "finishedAt": "2026-10-25T21:02:58.014Z"
 }

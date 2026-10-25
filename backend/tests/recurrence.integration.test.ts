@@ -1,0 +1,23 @@
+import {randomUUID} from 'node:crypto';
+import {afterAll,beforeAll,describe,expect,it} from 'vitest';
+import request from 'supertest';
+import {app} from '../src/app.js';
+import {prisma} from '../src/lib/prisma.js';
+import {env} from '../src/config/env.js';
+import {createAccessToken} from '../src/modules/auth/token.service.js';
+import {materializeRecurrences,setRecurrenceActive} from '../src/modules/accounts/recurrence.service.js';
+describe.skipIf(process.env.RUN_DATABASE_TESTS!=='1')('previsão recorrente PostgreSQL',()=>{
+ const owner=randomUUID(),other=randomUUID(),now=new Date('2026-10-25');
+ const auth={Authorization:`Bearer ${createAccessToken(owner,env.JWT_SECRET)}`};
+ let root:string;
+ beforeAll(async()=>{await prisma.usuario.createMany({data:[owner,other].map(id=>({id,nome:'Recorrência QA',email:`${id}@example.org`,senhaHash:'teste'}))});root=(await prisma.conta.create({data:{usuarioId:owner,descricao:'Mensalidade',valor:100,vencimento:new Date('2026-09-30'),tipo:'RECORRENTE',recorrencia:'MENSAL',diaRecorrencia:31}})).id;});
+ afterAll(async()=>{const rows=await prisma.conta.findMany({where:{usuarioId:{in:[owner,other]}},orderBy:{vencimento:'desc'}});for(const c of rows)await prisma.conta.delete({where:{id:c.id}});await prisma.usuario.deleteMany({where:{id:{in:[owner,other]}}});await prisma.$disconnect();});
+ it('gera outubro e novembro sem qualquer pagamento',async()=>{expect((await materializeRecurrences(now,owner)).created).toBe(2);const rows=await prisma.conta.findMany({where:{usuarioId:owner},orderBy:{vencimento:'asc'}});expect(rows.map(c=>c.vencimento.toISOString().slice(0,10))).toEqual(['2026-09-30','2026-10-31','2026-11-30']);expect(await prisma.pagamento.count({where:{conta:{usuarioId:owner}}})).toBe(0);});
+ it('concorrência e repetição não duplicam competências',async()=>{const results=await Promise.all(Array.from({length:4},()=>materializeRecurrences(now,owner)));expect(results.every(r=>r.created===0)).toBe(true);expect(await prisma.conta.count({where:{usuarioId:owner}})).toBe(3);});
+ it('isola sincronização pelo token',async()=>{const r=await request(app).post('/api/accounts/recurrences/sync').set({Authorization:`Bearer ${createAccessToken(other,env.JWT_SECRET)}`});expect(r.status).toBe(200);expect(r.body.created).toBe(0);});
+ it('conta alheia não permite pausar',async()=>{await expect(setRecurrenceActive(other,root,false)).rejects.toMatchObject({status:404});});
+ it('pausa a série inteira sem remover contas ou histórico',async()=>{await setRecurrenceActive(owner,root,false);expect(await prisma.conta.count({where:{usuarioId:owner,recorrenciaAtiva:true}})).toBe(0);expect((await materializeRecurrences(new Date('2027-02-01'),owner)).created).toBe(0);expect(await prisma.conta.count({where:{usuarioId:owner}})).toBe(3);});
+ it('retoma, projeta e preserva o dia 31 no calendário',async()=>{const tail=await prisma.conta.findFirstOrThrow({where:{usuarioId:owner},orderBy:{vencimento:'desc'}});await setRecurrenceActive(owner,tail.id,true);await materializeRecurrences(new Date('2027-02-01'),owner);const rows=await prisma.conta.findMany({where:{usuarioId:owner},orderBy:{vencimento:'asc'}});expect(rows.map(c=>c.vencimento.toISOString().slice(0,10))).toContain('2027-02-28');expect(rows.at(-1)!.vencimento.toISOString().slice(0,10)).toBe('2027-03-31');});
+ it('rota de pausa valida payload e exige autenticação',async()=>{expect((await request(app).patch(`/api/accounts/${root}/recurrence`).send({ativa:false})).status).toBe(401);expect((await request(app).patch(`/api/accounts/${root}/recurrence`).set(auth).send({ativa:'false'})).status).toBe(400);});
+ it('cadastro recorrente já entrega previsão independente da quitação',async()=>{const r=await request(app).post('/api/accounts').set(auth).send({descricao:'Nova série',valor:50,vencimento:'2026-10-10',tipo:'RECORRENTE',recorrencia:'MENSAL'});expect(r.status).toBe(201);expect(await prisma.conta.count({where:{origemId:r.body.account.id}})).toBe(1);});
+});

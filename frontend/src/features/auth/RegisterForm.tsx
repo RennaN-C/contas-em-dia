@@ -16,6 +16,8 @@ export function RegisterForm() {
   const [formError, setFormError] = useState<string | null>(null);
   const [registeredName, setRegisteredName] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [confirmation,setConfirmation]=useState('');
+  const [showPassword,setShowPassword]=useState(false);
 
   function updateField(field: keyof RegisterInput, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
@@ -27,6 +29,7 @@ export function RegisterForm() {
     setFormError(null);
 
     const validationErrors = validateRegisterForm(values);
+    if (confirmation !== values.senha) validationErrors.senha = 'As senhas devem ser iguais';
     setErrors(validationErrors);
 
     if (Object.keys(validationErrors).length > 0) {
@@ -44,6 +47,7 @@ export function RegisterForm() {
 
       setRegisteredName(user.nome);
       setValues(initialValues);
+      setConfirmation('');
     } catch (error) {
       if (error instanceof ApiError) {
         const apiErrors = registerErrorsFromApi(error);
@@ -122,7 +126,7 @@ export function RegisterForm() {
         <input
           id="register-senha"
           name="senha"
-          type="password"
+          type={showPassword?'text':'password'}
           autoComplete="new-password"
           value={values.senha}
           onChange={(event) => updateField("senha", event.target.value)}
@@ -139,6 +143,9 @@ export function RegisterForm() {
           </span>
         )}
       </div>
+
+      <div className="field"><label htmlFor="register-confirmation">Confirmar senha</label><input id="register-confirmation" type={showPassword?'text':'password'} autoComplete="new-password" value={confirmation} onChange={e=>setConfirmation(e.target.value)} required aria-invalid={!!errors.senha}/></div>
+      <button className="password-toggle" type="button" aria-pressed={showPassword} onClick={()=>setShowPassword(v=>!v)}>{showPassword?'Ocultar senhas':'Mostrar senhas'}</button>
 
       <button className="button" type="submit" disabled={submitting}>
         {submitting ? "Cadastrando..." : "Criar conta"}

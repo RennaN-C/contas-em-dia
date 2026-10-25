@@ -44,6 +44,7 @@ model Conta {
   proxima Conta? @relation("Lancamentos")
   diaRecorrencia Int? @map("dia_recorrencia")
   recorrencia  String?
+  recorrenciaAtiva Boolean @default(true) @map("recorrencia_ativa")
   status       StatusConta @default(PENDENTE)
   pagamentos   Pagamento[]
   avisos       Aviso[]
@@ -98,4 +99,19 @@ model Mensagem {
 
   @@index([usuarioId, criadoEm])
   @@map("mensagens")
+}
+
+model TaxaReferencia {
+  chave String @id
+  taxaAnual Decimal @db.Decimal(12, 6) @map("taxa_anual")
+  fonte String
+  referencia DateTime?
+  consultadaEm DateTime @map("consultada_em")
+  @@map("taxas_referencia")
+}
+
+model ExecucaoJob {
+  chave String @id
+  concluidoEm DateTime @map("concluido_em")
+  @@map("execucoes_jobs")
 }

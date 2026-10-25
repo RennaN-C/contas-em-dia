@@ -1,0 +1,23 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+const {db}=vi.hoisted(()=>({db:{taxaReferencia:{findUnique:vi.fn(),upsert:vi.fn()}}}));
+vi.mock('../src/lib/prisma.js',()=>({prisma:db}));
+vi.mock('../src/integrations/brasil-api/selic.client.js',()=>({fetchSelic:vi.fn()}));
+vi.mock('../src/integrations/banco-central/selic.client.js',()=>({fetchCentralBankSelic:vi.fn()}));
+import {getAnnualSelic} from '../src/integrations/brasil-api/rate.service.js';
+import {fetchSelic} from '../src/integrations/brasil-api/selic.client.js';
+import {fetchCentralBankSelic} from '../src/integrations/banco-central/selic.client.js';
+const now=new Date('2026-10-25T18:00:00Z');
+const cached={chave:'SELIC',taxaAnual:'13.75',fonte:'Banco Central · SGS 432',referencia:new Date('2026-10-23'),consultadaEm:new Date(now.getTime()-30*60*1000)};
+beforeEach(()=>{vi.resetAllMocks();db.taxaReferencia.findUnique.mockResolvedValue(null);vi.mocked(fetchSelic).mockResolvedValue({status:'indisponivel'});vi.mocked(fetchCentralBankSelic).mockResolvedValue({status:'indisponivel'});});
+afterEach(()=>vi.restoreAllMocks());
+describe('Selic resiliente',()=>{
+ it('mantém BrasilAPI como fonte primária e persiste a taxa',async()=>{vi.mocked(fetchSelic).mockResolvedValue({status:'disponivel',taxaAnual:15});expect(await getAnnualSelic(now)).toMatchObject({status:'disponivel',taxaAnual:15,fonte:'BrasilAPI',emCache:false});expect(fetchCentralBankSelic).not.toHaveBeenCalled();expect(db.taxaReferencia.upsert).toHaveBeenCalledOnce();});
+ it('recorre à taxa anual do Banco Central quando BrasilAPI falha',async()=>{vi.mocked(fetchCentralBankSelic).mockResolvedValue({status:'disponivel',taxaAnual:13.75,referencia:new Date('2026-10-23'),date:'23/10/2026'});expect(await getAnnualSelic(now)).toMatchObject({status:'disponivel',taxaAnual:13.75,fonte:'Banco Central · SGS 432'});});
+ it('cache fresco evita chamadas externas',async()=>{db.taxaReferencia.findUnique.mockResolvedValue(cached);expect(await getAnnualSelic(now)).toMatchObject({emCache:true,desatualizada:false,taxaAnual:13.75});expect(fetchSelic).not.toHaveBeenCalled();});
+ it('após uma hora tenta atualizar ambas as fontes',async()=>{db.taxaReferencia.findUnique.mockResolvedValue({...cached,consultadaEm:new Date(now.getTime()-3600000)});expect(await getAnnualSelic(now)).toMatchObject({emCache:true,desatualizada:true});expect(fetchSelic).toHaveBeenCalledOnce();expect(fetchCentralBankSelic).toHaveBeenCalledOnce();});
+ it('cache antigo até sete dias é explícito, com fonte e data originais',async()=>{db.taxaReferencia.findUnique.mockResolvedValue({...cached,consultadaEm:new Date(now.getTime()-7*86400000)});expect(await getAnnualSelic(now)).toMatchObject({status:'disponivel',desatualizada:true,fonte:cached.fonte,consultadaEm:'2026-10-18T18:00:00.000Z'});});
+ it('não usa cache vencido nem inventa taxa',async()=>{db.taxaReferencia.findUnique.mockResolvedValue({...cached,consultadaEm:new Date(now.getTime()-8*86400000)});expect(await getAnnualSelic(now)).toEqual({status:'indisponivel'});});
+ it('não aceita cache de consulta futura',async()=>{db.taxaReferencia.findUnique.mockResolvedValue({...cached,consultadaEm:new Date(now.getTime()+1000)});expect(await getAnnualSelic(now)).toEqual({status:'indisponivel'});});
+ it('consultas concorrentes compartilham a busca externa',async()=>{vi.mocked(fetchSelic).mockResolvedValue({status:'disponivel',taxaAnual:15});const values=await Promise.all(Array.from({length:10},()=>getAnnualSelic(now)));expect(values.every(v=>v.status==='disponivel')).toBe(true);expect(fetchSelic).toHaveBeenCalledOnce();expect(db.taxaReferencia.upsert).toHaveBeenCalledOnce();});
+ it('falha sem cache retorna indisponibilidade controlada',async()=>expect(await getAnnualSelic(now)).toEqual({status:'indisponivel'}));
+});

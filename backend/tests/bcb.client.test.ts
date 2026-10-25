@@ -1,0 +1,9 @@
+import { afterEach, expect, it, vi } from 'vitest';
+import { BCB_SELIC_URL, fetchCentralBankSelic } from '../src/integrations/banco-central/selic.client.js';
+const now=new Date('2026-10-25T18:00:00Z');
+afterEach(()=>vi.useRealTimers());
+it('consulta SGS 432 e seleciona a referência mais recente válida',async()=>{const fetcher=vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify([{data:'22/10/2026',valor:'13.75'},{data:'23/10/2026',valor:'13.75'}])));expect(await fetchCentralBankSelic(fetcher,100,now)).toMatchObject({status:'disponivel',taxaAnual:13.75,referencia:new Date('2026-10-23')});expect(fetcher.mock.calls[0]![0]).toBe(`${BCB_SELIC_URL}?formato=json&dataInicial=11/10/2026&dataFinal=25/10/2026`);});
+it.each([[],[{data:'04/11/2026',valor:'13.75'}],[{data:'30/02/2026',valor:'15'}],[{data:'01/01/2020',valor:'15'}],[{data:'23/10/2026',valor:'-1'}],[{data:'23/10/2026',valor:'abc'}],{valor:'15'},[{data:'23/10/2026',valor:15}]])('rejeita dados inválidos/futuros %j',async body=>{expect(await fetchCentralBankSelic(vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify(body))),100,now)).toEqual({status:'indisponivel'});});
+it('trata HTTP 500',async()=>expect(await fetchCentralBankSelic(vi.fn<typeof fetch>().mockResolvedValue(new Response('',{status:500})),100,now)).toEqual({status:'indisponivel'}));
+it('trata falha de rede',async()=>expect(await fetchCentralBankSelic(vi.fn<typeof fetch>().mockRejectedValue(new Error('offline')),100,now)).toEqual({status:'indisponivel'}));
+it('timeout cobre corpo que não termina',async()=>{vi.useFakeTimers();const response={ok:true,json:()=>new Promise(()=>{})} as Response;const result=fetchCentralBankSelic(vi.fn<typeof fetch>().mockResolvedValue(response),100,now);await vi.advanceTimersByTimeAsync(100);expect(await result).toEqual({status:'indisponivel'});expect(vi.getTimerCount()).toBe(0);});

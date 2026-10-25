@@ -7,6 +7,6 @@ export const loginSchema = z.object({
     .email("E-mail inválido")
     .transform((value) => value.toLowerCase()),
   senha: z.string().min(1, "Senha é obrigatória").max(72)
-});
+}).strict();
 
 export type LoginInput = z.infer<typeof loginSchema>;

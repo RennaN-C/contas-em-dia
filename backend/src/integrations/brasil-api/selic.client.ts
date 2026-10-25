@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const SELIC_URL = 'https://brasilapi.com.br/api/taxas/v1/Selic';
-const contract = z.object({ nome: z.literal('Selic'), valor: z.number().finite().nonnegative() });
+const contract = z.object({ nome: z.string().trim().transform(value => value.toUpperCase()).pipe(z.literal('SELIC')), valor: z.number().finite().nonnegative() });
 export type SelicResult = { status: 'disponivel'; taxaAnual: number } | { status: 'indisponivel' };
 
 /** Timeout covers the HTTP response AND body; the timer is always released. */

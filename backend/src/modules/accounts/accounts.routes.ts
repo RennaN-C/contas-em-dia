@@ -1,5 +1,7 @@
 import { Router, type Request, type Response } from 'express';
-import { ZodError } from 'zod';
+import { z, ZodError } from 'zod';
+import { materializeRecurrences, setRecurrenceActive } from './recurrence.service.js';
+import { businessDay } from '../notifications/dates.js';
 import { env } from '../../config/env.js';
 import { createAuthenticate, getAuthenticatedUserId } from '../../middlewares/authenticate.js';
 import { validationError } from '../../lib/validation-error.js';
@@ -19,6 +21,8 @@ export const handle = (fn:(r:Request,s:Response)=>Promise<unknown>) => async(r:R
 const uid=getAuthenticatedUserId;
 accountsRoutes.get('/',handle(async(r,s)=>s.json({accounts:await listAccounts(uid(r),statusSchema.parse(r.query.status))})));
 accountsRoutes.post('/',handle(async(r,s)=>s.status(201).json({account:await createAccount(uid(r),accountSchema.parse(r.body))})));
+accountsRoutes.post('/recurrences/sync',handle(async(r,s)=>s.json(await materializeRecurrences(businessDay(),uid(r)))));
+accountsRoutes.patch('/:id/recurrence',handle(async(r,s)=>s.json(await setRecurrenceActive(uid(r),idSchema.parse(r.params.id),z.object({ativa:z.boolean()}).strict().parse(r.body).ativa))));
 accountsRoutes.get('/:id',handle(async(r,s)=>s.json({account:await getAccount(uid(r),idSchema.parse(r.params.id))})));
 accountsRoutes.put('/:id',handle(async(r,s)=>s.json({account:await mutateAccount(uid(r),idSchema.parse(r.params.id),accountSchema.parse(r.body))})));
 accountsRoutes.delete('/:id',handle(async(r,s)=>s.json(await mutateAccount(uid(r),idSchema.parse(r.params.id)))));

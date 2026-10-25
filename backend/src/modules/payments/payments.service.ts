@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { prisma } from '../../lib/prisma.js';
 import { dateOnly, money } from '../accounts/accounts.schema.js';
 import { AccountError, accountStatus, cents, nextDue } from '../accounts/accounts.service.js';
-export const paymentSchema = z.object({valor:money,pagoEm:dateOnly.refine(v=>v<=new Date().toISOString().slice(0,10),'Pagamento não pode estar no futuro'),chave:z.string().uuid()}).strict();
+import { businessDay } from '../notifications/dates.js';
+export const paymentSchema = z.object({valor:money,pagoEm:dateOnly.refine(v=>v<=businessDay().toISOString().slice(0,10),'Pagamento não pode estar no futuro'),chave:z.string().uuid()}).strict();
 export async function registerPayment(usuarioId:string,id:string,input:z.infer<typeof paymentSchema>) {
  return prisma.$transaction(async tx=>{
   await tx.$queryRaw`SELECT id FROM contas WHERE id = ${id} AND usuario_id = ${usuarioId} FOR UPDATE`;
@@ -18,9 +19,9 @@ export async function registerPayment(usuarioId:string,id:string,input:z.infer<t
   const payment=await tx.pagamento.create({data:{contaId:id,valor:input.valor,pagoEm:new Date(input.pagoEm),chave:input.chave}});
   const status=accountStatus(c.valor,c.vencimento,[...c.pagamentos,payment]);
   await tx.conta.update({where:{id},data:{status}});
-  if(status==='PAGA' && c.tipo==='RECORRENTE') {
+  if(status==='PAGA' && c.tipo==='RECORRENTE' && c.recorrenciaAtiva !== false) {
    const due=nextDue(c.vencimento,c.diaRecorrencia??c.vencimento.getUTCDate());
-   await tx.conta.upsert({where:{origemId:id},update:{},create:{usuarioId,descricao:c.descricao,valor:c.valor,vencimento:due,tipo:'RECORRENTE',recorrencia:'MENSAL',diaRecorrencia:c.diaRecorrencia??c.vencimento.getUTCDate(),origemId:id}});
+   await tx.conta.upsert({where:{origemId:id},update:{},create:{usuarioId,descricao:c.descricao,valor:c.valor,vencimento:due,tipo:'RECORRENTE',recorrencia:'MENSAL',recorrenciaAtiva:true,diaRecorrencia:c.diaRecorrencia??c.vencimento.getUTCDate(),origemId:id}});
   }
   return payment;
  },{isolationLevel:'Serializable'});

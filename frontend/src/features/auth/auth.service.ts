@@ -34,3 +34,7 @@ export async function fetchCurrentUser(): Promise<User> {
 
   return user;
 }
+export async function updateCurrentUser(input:{nome:string;email:string}): Promise<User> {
+  const {user} = await api<{user:User}>('/users/me',{method:'PUT',body:JSON.stringify(input)});
+  return user;
+}
