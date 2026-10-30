@@ -30,7 +30,33 @@ para resultados, screenshots desktop/mobile e reprodução do fluxo no Chrome.
 
 A divisão de responsabilidades e a estrutura obrigatória do projeto estão em [AGENTS.md](./AGENTS.md).
 
-## Execução local
+## Docker Compose — sistema completo
+
+Para subir **PostgreSQL + backend + frontend** em um único comando, use o
+[guia de execução Docker](docs/docker.md). Na primeira utilização, crie
+`backend/.env` a partir de `backend/.env.example` e substitua `JWT_SECRET`
+por uma chave aleatória (mínimo 32 caracteres). As variáveis locais do backend
+são lidas pelo Compose, mas `DATABASE_URL` é substituída internamente para
+o host `db` do Docker.
+
+Na raiz do repositório:
+
+```powershell
+docker compose up -d --build --wait
+docker compose ps
+```
+
+- **Aplicação:** http://localhost:5174
+- **API:** http://localhost:5174/api/health (também http://localhost:3000/api/health)
+- **PostgreSQL:** localhost:5432, acessível somente no próprio computador.
+
+O backend aplica as migrações Prisma automaticamente antes de iniciar; não é
+necessário executar `npm ci`, `prisma generate` ou `npm run dev` no Windows.
+Os dados permanecem no volume `postgres_data`. Para desligar sem apagar
+dados: `docker compose down`. **Não use `docker compose down -v`** se quiser
+preservar as contas cadastradas.
+
+## Execução manual (Node.js local + banco no Docker)
 
 1. Copie `backend/.env.example` para `backend/.env` e `frontend/.env.example` para `frontend/.env`.
 2. Execute `docker compose up -d db`.

@@ -61,3 +61,32 @@ jobs:
       - run: npm run build
       - run: npm test
       - run: npm audit --audit-level=high
+
+  docker-smoke:
+    name: Docker Compose — stack completa
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preparar configurações locais descartáveis
+        run: |
+          cp backend/.env.example backend/.env
+          sed -i "s|^JWT_SECRET=.*|JWT_SECRET=$(openssl rand -hex 32)|" backend/.env
+      - name: Validar configuração Docker Compose
+        run: docker compose config --quiet
+      - name: Construir e iniciar os três serviços
+        run: docker compose up -d --build --wait --wait-timeout 240
+      - name: Verificar healthchecks e acesso HTTP
+        run: |
+          docker compose ps
+          curl --fail --silent --show-error http://127.0.0.1:3000/api/health | grep -q '"status":"ok"'
+          curl --fail --silent --show-error http://127.0.0.1:5174/api/health | grep -q '"status":"ok"'
+          curl --fail --silent --show-error http://127.0.0.1:5174/ | grep -q '<div id="root"'
+      - name: Diagnóstico em caso de falha
+        if: failure()
+        run: |
+          docker compose ps || true
+          docker compose logs --no-color --tail=100 || true
+      - name: Desligar containers sem apagar dados
+        if: always()
+        run: docker compose down
