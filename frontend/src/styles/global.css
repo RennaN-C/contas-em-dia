@@ -457,3 +457,39 @@ caption { text-align: left; padding-block: .5rem; }
 .eyebrow, .chart-legend, .donut span, .upcoming-list li > div > span { color: #58705f; }
 .payment-table th:nth-child(n+2):nth-child(-n+4),.payment-table td:nth-child(n+2):nth-child(-n+4) {text-align:right;font-variant-numeric:tabular-nums;}.payment-table th:last-child,.payment-table td:last-child {text-align:right;}.table-action {min-height:44px;}
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+.account-toolbar.account-filters { grid-template-columns: minmax(180px, 1.5fr) repeat(3, minmax(130px, 1fr)); padding-bottom: 1rem; }
+.results-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem; }
+.results-toolbar > span { color: #526e5c; font-size: .8rem; }
+.results-toolbar > div { display: flex; gap: .6rem; flex-wrap: wrap; }
+.results-toolbar button { display: inline-flex; align-items: center; gap: .4rem; font-size: .75rem; min-height: 44px; }
+.results-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .8rem; margin: 0 0 1.5rem; }
+.results-summary > div { background: #fff; border: 1px solid #dfe8df; border-radius: 12px; padding: 1.1rem; min-width: 0; }
+.results-summary dt { color: #526e5c; font-size: .74rem; margin-bottom: .65rem; }
+.results-summary dd { margin: 0; color: #213f2e; font-size: clamp(1rem, 1.5vw, 1.45rem); font-weight: 650; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.results-summary .summary-warning { background: #fff8f2; border-color: #efd6c6; }
+.results-summary .summary-warning dd { color: #903f25; }
+.pagination { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .8rem; margin-top: 1.2rem; padding-block: .5rem; }
+.pagination > span { color: #526e5c; font-size: .78rem; }
+.pagination > div { display: flex; gap: .5rem; }
+.pagination button { min-height: 44px; font-size: .78rem; }
+.settings-section { border: 0; border-bottom: 1px solid #dfe8df; padding: 0 0 1.35rem; margin: 0; display: grid; gap: 1rem; min-width: 0; }
+.settings-section legend { display: flex; align-items: center; gap: .6rem; padding: 0; margin-bottom: .8rem; font-size: 1rem; font-weight: 650; color: #213f2e; }
+.settings-section > p, .settings-note p, .settings-profile p { font-size: .8rem; color: #526e5c; line-height: 1.7; margin: 0; }
+.settings-note { padding: 1rem; border-radius: 10px; background: #f2f7ef; border: 1px solid #dfe8df; }
+.settings-note strong { display: block; font-size: .82rem; margin-bottom: .5rem; }
+.settings-aside { display: grid; gap: 1.2rem; }
+.settings-profile > .icon { color: #146e54; }
+.settings-profile .text-link { display: inline-flex; align-items: center; gap: .5rem; margin-top: 1rem; font-size: .82rem; }
+.settings-save-status { font-size: .78rem; color: #526e5c; }
+.charges-panel { border: 1px solid #cddfcc; border-radius: 12px; background: #f5faf3; padding: 1rem; }
+.charges-heading { display: flex; align-items: center; justify-content: space-between; gap: .8rem; flex-wrap: wrap; }
+.charges-heading h3 { margin: 0; font-size: .95rem; }
+.charges-heading button { font-size: .75rem; min-height: 44px; }
+.payment-total-preview { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .8rem; padding: 1rem; margin: 0; border-top: 1px solid #dfe8df; }
+.payment-total-preview dt { font-size: .85rem; color: #526e5c; }
+.payment-total-preview dd { margin: 0; color: #1a5436; font-size: 1.6rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.form-section-title { margin: .4rem 0 0; padding-top: .4rem; color: #213f2e; font-size: .95rem; }
+.registration-next { text-align: left; padding-left: 1.2rem; font-size: .85rem; line-height: 1.8; }
+@media (max-width: 1000px) { .account-toolbar.account-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } .results-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .account-toolbar.account-filters > label:first-child { grid-column: auto; } .results-toolbar > div { width: 100%; } .results-toolbar button { flex: 1; justify-content: center; } .results-summary { gap: .6rem; } .results-summary > div { padding: .9rem; } .results-summary dd { font-size: 1.1rem; } }

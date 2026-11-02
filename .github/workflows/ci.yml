@@ -66,16 +66,19 @@ jobs:
     name: Docker Compose — stack completa
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      COMPOSE_PROJECT_NAME: saldo-smoke-ci
     steps:
       - uses: actions/checkout@v4
-      - name: Preparar configurações locais descartáveis
-        run: |
-          cp backend/.env.example backend/.env
-          sed -i "s|^JWT_SECRET=.*|JWT_SECRET=$(openssl rand -hex 32)|" backend/.env
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
       - name: Validar configuração Docker Compose
         run: docker compose config --quiet
       - name: Construir e iniciar os três serviços
         run: docker compose up -d --build --wait --wait-timeout 240
+      - name: Validar primeira execução sem .env, pagamentos e reinicialização
+        run: node backend/tests/docker-smoke.mjs
       - name: Verificar healthchecks e acesso HTTP
         run: |
           docker compose ps

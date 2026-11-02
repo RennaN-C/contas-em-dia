@@ -8,7 +8,7 @@ import { Messages } from '../src/features/messages/Messages';
 import { messagesApi, type Message } from '../src/features/messages/messages.api';
 import { notificationsApi } from '../src/features/notifications/notifications.api';
 vi.mock('../src/features/messages/messages.api', () => ({ messagesApi: { list: vi.fn(), read: vi.fn() } }));
-vi.mock('../src/features/notifications/notifications.api', () => ({ notificationsApi: { summary: vi.fn(), interest: vi.fn() } }));
+vi.mock('../src/features/notifications/notifications.api', () => ({ notificationsApi: { summary: vi.fn(), interest: vi.fn(), refresh: vi.fn() } }));
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 let container: HTMLDivElement, root: Root;
 const message: Message = { id: 'id', titulo: 'Vencimento hoje', conteudo: 'Saldo de R$ 60,00', lida: false, tipo: 'AVISO', criadoEm: '2026-10-25', conta: { id: 'c', descricao: 'Aluguel', vencimento: '2026-10-25' } };
@@ -78,4 +78,19 @@ it('ignora resposta de mensagem após desmontagem', async () => {
   let resolve!: (value: { messages: Message[] }) => void;
   vi.mocked(messagesApi.list).mockReturnValue(new Promise(r => { resolve = r; }));
   await render(<Messages/>); await act(async () => root.render(<div>Outra página</div>)); await act(async () => resolve({ messages: [message] })); expect(container.textContent).toBe('Outra página');
+});
+it('atualizar avisos recarrega a central e mostra a nova mensagem de três dias', async () => {
+  const changed = vi.fn(); window.addEventListener('saldo:messages-changed', changed);
+  try {
+    await render();
+    vi.mocked(notificationsApi.refresh).mockResolvedValue({ message: 'Avisos atualizados' });
+    vi.mocked(messagesApi.list).mockResolvedValue({ messages: [{ ...message, titulo: 'Vencimento em 3 dia(s)', conta: { ...message.conta!, descricao: 'Conta para demonstração' } }] });
+    await click('Atualizar avisos');
+    expect(notificationsApi.refresh).toHaveBeenCalledOnce();
+    expect(container.textContent).toContain('Vencimento em 3 dia(s)');
+    expect(container.textContent).toContain('Conta para demonstração');
+    expect(messagesApi.list).toHaveBeenCalledTimes(2);
+    expect(notificationsApi.summary).toHaveBeenCalledTimes(2);
+    expect(changed).toHaveBeenCalledOnce();
+  } finally { window.removeEventListener('saldo:messages-changed', changed); }
 });

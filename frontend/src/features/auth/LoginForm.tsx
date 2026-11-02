@@ -8,13 +8,14 @@ const initialValues: LoginInput = { email: "", senha: "" };
 
 type LoginLocationState = {
   from?: string;
+  email?: string;
 };
 
 export function LoginForm() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
-  const [values, setValues] = useState(initialValues);
+  const [values, setValues] = useState(()=>({...initialValues,email:typeof (location.state as LoginLocationState|null)?.email==='string'?(location.state as LoginLocationState).email!:''}));
   const [errors, setErrors] = useState<LoginErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);

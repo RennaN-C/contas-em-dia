@@ -7,7 +7,7 @@ import { createAuthenticate, getAuthenticatedUserId } from '../../middlewares/au
 import { validationError } from '../../lib/validation-error.js';
 import { accountSchema, idSchema, statusSchema } from './accounts.schema.js';
 import { AccountError, createAccount, getAccount, listAccounts, mutateAccount } from './accounts.service.js';
-import { paymentSchema, registerPayment } from '../payments/payments.service.js';
+import { paymentSchema, registerPayment, paymentPreviewSchema, previewPayment } from '../payments/payments.service.js';
 export const accountsRoutes=Router();
 accountsRoutes.use(createAuthenticate(env.JWT_SECRET));
 export const handle = (fn:(r:Request,s:Response)=>Promise<unknown>) => async(r:Request,s:Response) => {
@@ -27,3 +27,4 @@ accountsRoutes.get('/:id',handle(async(r,s)=>s.json({account:await getAccount(ui
 accountsRoutes.put('/:id',handle(async(r,s)=>s.json({account:await mutateAccount(uid(r),idSchema.parse(r.params.id),accountSchema.parse(r.body))})));
 accountsRoutes.delete('/:id',handle(async(r,s)=>s.json(await mutateAccount(uid(r),idSchema.parse(r.params.id)))));
 accountsRoutes.post('/:id/payments',handle(async(r,s)=>s.status(201).json({payment:await registerPayment(uid(r),idSchema.parse(r.params.id),paymentSchema.parse(r.body))})));
+accountsRoutes.post('/:id/payments/preview',handle(async(r,s)=>s.json({preview:await previewPayment(uid(r),idSchema.parse(r.params.id),paymentPreviewSchema.parse(r.body))})));

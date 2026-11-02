@@ -15,5 +15,9 @@ COPY tsconfig.json ./
 COPY src ./src
 RUN npm run build
 
+RUN mkdir -p /app/runtime && chown -R node:node /app/runtime
+ENV DOTENV_CONFIG_PATH=/app/runtime/.env
+USER node
+
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/server.js"]
+CMD ["sh", "-c", "node dist/src/config/bootstrap.js && node --import dotenv/config node_modules/prisma/build/index.js migrate deploy && exec node dist/src/server.js"]

@@ -124,5 +124,6 @@ model PreferenciaUsuario {
   ordenacaoContas String @default("vencimento") @map("ordenacao_contas")
   confirmarPagamento Boolean @default(true) @map("confirmar_pagamento")
   reduzirMovimento Boolean @default(false) @map("reduzir_movimento")
+  tipoContaPadrao TipoConta @default(AVULSA) @map("tipo_conta_padrao")
   @@map("preferencias_usuarios")
 }
