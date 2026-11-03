@@ -44,7 +44,7 @@ function LayoutContent() {
                   className="layout-nav-link"
                   onClick={() => setMenuOpen(false)}
                 >
-                  <Icon name={({'/':'home','/contas':'wallet','/pagamentos':'payment','/avisos':'bell','/perfil':'user','/configuracoes':'settings'} as Record<string,string>)[item.to] ?? 'home'}/>{item.label}{item.to === '/avisos' && unread > 0 && <span id="unread-description" className="unread-badge" aria-label={`${unread} mensagens não lidas`}>{unread}</span>}
+                  <Icon name={({'/':'home','/contas':'wallet','/pagamentos':'payment','/calendario':'calendar','/relatorios':'report','/avisos':'bell','/perfil':'user','/configuracoes':'settings'} as Record<string,string>)[item.to] ?? 'home'}/>{item.label}{item.to === '/avisos' && unread > 0 && <span id="unread-description" className="unread-badge" aria-label={`${unread} mensagens não lidas`}>{unread}</span>}
                 </NavLink>
               </li>
             ))}

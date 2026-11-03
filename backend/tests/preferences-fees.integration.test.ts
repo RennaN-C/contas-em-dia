@@ -8,8 +8,8 @@ import {createAccessToken} from '../src/modules/auth/token.service.js';
 import {businessDay,addDays} from '../src/modules/notifications/dates.js';
 describe.skipIf(process.env.RUN_DATABASE_TESTS!=='1')('preferências e encargos reais PostgreSQL',()=>{
  const owner=randomUUID(),other=randomUUID(),key=randomUUID();const headers={Authorization:`Bearer ${createAccessToken(owner,env.JWT_SECRET)}`},foreign={Authorization:`Bearer ${createAccessToken(other,env.JWT_SECRET)}`};let accountId:string;
- const defaults={ordenacaoContas:'vencimento',confirmarPagamento:true,reduzirMovimento:false,tipoContaPadrao:'AVULSA'};
- const prefs={ordenacaoContas:'valor',confirmarPagamento:false,reduzirMovimento:true,tipoContaPadrao:'RECORRENTE'};
+ const defaults={ordenacaoContas:'vencimento',confirmarPagamento:true,reduzirMovimento:false,tipoContaPadrao:'AVULSA',categoriaPadrao:'OUTRAS',inicioSemana:0,detalhesRelatorio:true};
+ const prefs={ordenacaoContas:'valor',confirmarPagamento:false,reduzirMovimento:true,tipoContaPadrao:'RECORRENTE',categoriaPadrao:'ESTUDOS',inicioSemana:1,detalhesRelatorio:false};
  beforeAll(async()=>{await prisma.usuario.createMany({data:[owner,other].map(id=>({id,nome:'QA preferências',email:`${id}@example.org`,senhaHash:'teste'}))});accountId=(await prisma.conta.create({data:{usuarioId:owner,descricao:'Principal e encargos',valor:100,vencimento:addDays(businessDay(),-5)}})).id;});
  afterAll(async()=>{await prisma.usuario.deleteMany({where:{id:{in:[owner,other]}}});await prisma.$disconnect();});
  it('preferências exigem JWT',async()=>{expect((await request(app).get('/api/users/me/preferences')).status).toBe(401);expect((await request(app).put('/api/users/me/preferences').send(prefs)).status).toBe(401);});

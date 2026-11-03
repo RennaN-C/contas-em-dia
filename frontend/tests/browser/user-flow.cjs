@@ -42,7 +42,7 @@ async function visible(locator) { await locator.waitFor({ state: 'visible', time
     await form.getByLabel('Descrição', { exact: true }).fill(description);
     await form.getByLabel('Valor', { exact: true }).fill(String(amount));
     await form.getByLabel('Vencimento', { exact: true }).fill(due);
-    await form.getByRole('combobox').first().selectOption(type);
+    await form.getByLabel('Tipo', { exact: true }).selectOption(type);
     await form.getByRole('button', { name: 'Salvar', exact: true }).click();
     await page.getByRole('dialog',{name:'Nova conta',exact:true}).waitFor({state:'detached'});
     await visible(page.getByRole('heading', { name: description, exact: true }).first());

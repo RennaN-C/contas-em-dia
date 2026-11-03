@@ -1,7 +1,8 @@
 import {createContext,useContext,useEffect,useState,type ReactNode} from 'react';
 import {api} from '../../services/api';
-export type Preferences={ordenacaoContas:'vencimento'|'valor'|'descricao';confirmarPagamento:boolean;reduzirMovimento:boolean;tipoContaPadrao:'AVULSA'|'RECORRENTE'};
-export const defaultPreferences:Preferences={ordenacaoContas:'vencimento',confirmarPagamento:true,reduzirMovimento:false,tipoContaPadrao:'AVULSA'};
+import type {Category} from '../accounts/categories';
+export type Preferences={ordenacaoContas:'vencimento'|'valor'|'descricao';confirmarPagamento:boolean;reduzirMovimento:boolean;tipoContaPadrao:'AVULSA'|'RECORRENTE';categoriaPadrao:Category;inicioSemana:0|1;detalhesRelatorio:boolean};
+export const defaultPreferences:Preferences={ordenacaoContas:'vencimento',confirmarPagamento:true,reduzirMovimento:false,tipoContaPadrao:'AVULSA',categoriaPadrao:'OUTRAS',inicioSemana:0,detalhesRelatorio:true};
 const context=createContext({preferences:defaultPreferences,loading:false,error:'',save:async(_p:Preferences)=>{},reload:()=>{}});
 export function PreferencesProvider({children}:{children:ReactNode}){
  const [preferences,setPreferences]=useState(defaultPreferences),[loading,setLoading]=useState(true),[error,setError]=useState(''),[revision,setRevision]=useState(0);

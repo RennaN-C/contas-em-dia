@@ -7,6 +7,7 @@ import {transaction} from '../../jobs/transaction.js';
 import { getAccount } from '../accounts/accounts.service.js';
 import { getAnnualSelic } from '../../integrations/brasil-api/rate.service.js';
 import { estimateInterest, INTEREST_NOTICE } from '../notifications/interest.service.js';
+import { accountSnapshot, recordAccountHistory } from '../accounts/history.service.js';
 export const paymentSchema = z.object({valor:money,encargos:money.or(z.literal(0)).optional(),pagoEm:dateOnly.refine(v=>v<=businessDay().toISOString().slice(0,10),'Pagamento não pode estar no futuro'),chave:z.string().uuid()}).strict();
 export const paymentPreviewSchema = paymentSchema.pick({ valor: true, pagoEm: true });
 
@@ -35,11 +36,14 @@ export async function registerPayment(usuarioId:string,id:string,input:z.infer<t
   const paid=c.pagamentos.reduce((n,p)=>n+cents(p.valor),0);
   if(paid+cents(input.valor)>cents(c.valor)) throw new AccountError('Pagamento excede o saldo da conta');
   const payment=await tx.pagamento.create({data:{contaId:id,valor:input.valor,...(input.encargos!==undefined?{encargos:input.encargos}:{}),pagoEm:new Date(input.pagoEm),chave:input.chave}});
+  await recordAccountHistory(tx, c, 'PAGAMENTO_REGISTRADO', { valor: String(payment.valor), encargos: String(payment.encargos ?? 0), pagoEm: input.pagoEm });
   const status=accountStatus(c.valor,c.vencimento,[...c.pagamentos,payment]);
   await tx.conta.update({where:{id},data:{status}});
   if(status==='PAGA' && c.tipo==='RECORRENTE' && c.recorrenciaAtiva !== false) {
    const due=nextDue(c.vencimento,c.diaRecorrencia??c.vencimento.getUTCDate());
-   await tx.conta.upsert({where:{origemId:id},update:{},create:{usuarioId,descricao:c.descricao,valor:c.valor,vencimento:due,tipo:'RECORRENTE',recorrencia:'MENSAL',recorrenciaAtiva:true,diaRecorrencia:c.diaRecorrencia??c.vencimento.getUTCDate(),origemId:id}});
+   const existingNext = await tx.conta.findUnique({where:{origemId:id}});
+   const next = await tx.conta.upsert({where:{origemId:id},update:{},create:{usuarioId,descricao:c.descricao,categoria:c.categoria,valor:c.valor,vencimento:due,tipo:'RECORRENTE',recorrencia:'MENSAL',recorrenciaAtiva:true,diaRecorrencia:c.diaRecorrencia??c.vencimento.getUTCDate(),origemId:id}});
+   if (!existingNext) await recordAccountHistory(tx, next, 'RECORRENCIA_GERADA', { depois: accountSnapshot(next) });
   }
   return payment;
  },'Serializable');

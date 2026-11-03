@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import express from 'express';
 import request from 'supertest';
-const {db}=vi.hoisted(()=>({db:{conta:{findMany:vi.fn(),findFirst:vi.fn(),create:vi.fn(),update:vi.fn(),delete:vi.fn(),upsert:vi.fn()},pagamento:{findUnique:vi.fn(),findMany:vi.fn(),create:vi.fn()},$queryRaw:vi.fn(),$transaction:vi.fn()}}));
+const {db}=vi.hoisted(()=>({db:{conta:{findUnique:vi.fn(),findMany:vi.fn(),findFirst:vi.fn(),create:vi.fn(),update:vi.fn(),delete:vi.fn(),upsert:vi.fn()},historicoConta:{createMany:vi.fn()},pagamento:{findUnique:vi.fn(),findMany:vi.fn(),create:vi.fn()},$queryRaw:vi.fn(),$transaction:vi.fn()}}));
 vi.mock('../src/lib/prisma.js',()=>({prisma:db}));
 vi.mock('../src/config/env.js',()=>({env:{JWT_SECRET:'secret-test-long-enough'}}));
 import { accountStatus, nextDue, mutateAccount } from '../src/modules/accounts/accounts.service.js';
@@ -16,7 +16,7 @@ const row={...input,id,usuarioId:'owner',vencimento:new Date(input.vencimento),d
 function app(){const a=express();a.use(express.json());a.use('/accounts',accountsRoutes);a.use('/payments',paymentsRoutes);return a;}
 const token=createAccessToken('owner','secret-test-long-enough');
 const auth={Authorization:`Bearer ${token}`};
-beforeEach(()=>{vi.resetAllMocks();db.$transaction.mockImplementation(fn=>fn(db));db.conta.findFirst.mockResolvedValue(row);db.conta.create.mockImplementation(({data})=>({...data,id,pagamentos:[]}));db.conta.update.mockImplementation(({data})=>({...row,...data}));});
+beforeEach(()=>{vi.resetAllMocks();db.$transaction.mockImplementation(fn=>fn(db));db.conta.findFirst.mockResolvedValue(row);db.conta.create.mockImplementation(({data})=>({...data,id,pagamentos:[]}));db.conta.update.mockImplementation(({data})=>({...row,...data}));db.conta.upsert.mockImplementation(({create})=>({...create,id:key}));});
 describe('datas, valores e status',()=>{
  it.each([['2026-01-31',31,'2026-02-28'],['2024-01-31',31,'2024-02-29'],['2026-02-28',31,'2026-03-31'],['2026-12-31',31,'2027-01-31']])('avança %s preservando âncora', (d,day,next)=>expect(nextDue(new Date(d),day).toISOString().slice(0,10)).toBe(next));
  it.each([['2026-02-30'],['2026-13-01'],['invalid']])('rejeita data %s',d=>expect(accountSchema.safeParse({...input,vencimento:d}).success).toBe(false));

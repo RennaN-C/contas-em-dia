@@ -70,6 +70,8 @@ describe("AppLayout", () => {
       ["Início", "/"],
       ["Contas", "/contas"],
       ["Pagamentos", "/pagamentos"],
+      ["Calendário", "/calendario"],
+      ["Relatórios", "/relatorios"],
       ["Avisos", "/avisos"],
       ["Perfil", "/perfil"],
       ["Configurações", "/configuracoes"]

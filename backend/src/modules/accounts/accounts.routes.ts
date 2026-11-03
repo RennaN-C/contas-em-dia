@@ -5,9 +5,11 @@ import { businessDay } from '../notifications/dates.js';
 import { env } from '../../config/env.js';
 import { createAuthenticate, getAuthenticatedUserId } from '../../middlewares/authenticate.js';
 import { validationError } from '../../lib/validation-error.js';
-import { accountSchema, idSchema, statusSchema } from './accounts.schema.js';
+import { accountSchema, idSchema, statusSchema, categorySchema } from './accounts.schema.js';
 import { AccountError, createAccount, getAccount, listAccounts, mutateAccount } from './accounts.service.js';
 import { paymentSchema, registerPayment, paymentPreviewSchema, previewPayment } from '../payments/payments.service.js';
+import { listAccountHistory } from './history.service.js';
+import { monthSchema, monthlyReport } from './reports.service.js';
 export const accountsRoutes=Router();
 accountsRoutes.use(createAuthenticate(env.JWT_SECRET));
 export const handle = (fn:(r:Request,s:Response)=>Promise<unknown>) => async(r:Request,s:Response) => {
@@ -19,7 +21,10 @@ export const handle = (fn:(r:Request,s:Response)=>Promise<unknown>) => async(r:R
  }
 };
 const uid=getAuthenticatedUserId;
-accountsRoutes.get('/',handle(async(r,s)=>s.json({accounts:await listAccounts(uid(r),statusSchema.parse(r.query.status))})));
+accountsRoutes.get('/',handle(async(r,s)=>s.json({accounts:await listAccounts(uid(r),statusSchema.parse(r.query.status),categorySchema.optional().parse(r.query.categoria))})));
+accountsRoutes.get('/reports/monthly',handle(async(r,s)=>s.json({report:await monthlyReport(uid(r),monthSchema.parse(r.query.mes))})));
+accountsRoutes.get('/history',handle(async(r,s)=>s.json({history:await listAccountHistory(uid(r))})));
+accountsRoutes.get('/:id/history',handle(async(r,s)=>s.json({history:await listAccountHistory(uid(r),idSchema.parse(r.params.id))})));
 accountsRoutes.post('/',handle(async(r,s)=>s.status(201).json({account:await createAccount(uid(r),accountSchema.parse(r.body))})));
 accountsRoutes.post('/recurrences/sync',handle(async(r,s)=>s.json(await materializeRecurrences(businessDay(),uid(r)))));
 accountsRoutes.patch('/:id/recurrence',handle(async(r,s)=>s.json(await setRecurrenceActive(uid(r),idSchema.parse(r.params.id),z.object({ativa:z.boolean()}).strict().parse(r.body).ativa))));

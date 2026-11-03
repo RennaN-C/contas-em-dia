@@ -1,5 +1,7 @@
 # Saldo +
 
+Versão estável **1.0.0**. Consulte o [histórico de versões](CHANGELOG.md).
+
 Sistema de finanças pessoais para cadastro de contas recorrentes e avulsas, controle de vencimentos, pagamentos, avisos automáticos e estimativa de juros de atraso com integração à BrasilAPI.
 
 O **Saldo +** inclui painel com indicadores financeiros, gráficos dos últimos
@@ -68,6 +70,52 @@ preservar as contas cadastradas.
   com consulta ao PostgreSQL em `/api/ready` e proxy que acompanha a recriação do backend.
 
 Resultados desta entrega: [validação de relatórios e Docker](docs/relatorio-relatorios-docker.md).
+
+### Categorias, calendário, relatório mensal e histórico
+
+- **Categorias:** Moradia, Estudos, Transporte, Saúde, Assinaturas, Alimentação,
+  Lazer e Outras. Cadastro e edição incluem categoria; as contas antigas recebem
+  Outras. O filtro combina categoria com descrição, tipo, status e mês. Em Contas,
+  “Ver distribuição por categoria” mostra os valores previstos dos resultados.
+  Novas competências recorrentes herdam a categoria da conta de origem; edições
+  continuam afetando somente o lançamento editado.
+- **Calendário (`/calendario`):** navegação mensal, filtro por categoria e destaque
+  textual e visual de pagas, pendentes e atrasadas. Selecionar um dia apresenta
+  suas contas; os detalhes incluem pagamentos e histórico de alterações.
+- **Relatório (`/relatorios`):** previsto, saldo atual das contas do mês, principal,
+  encargos e total desembolsado, além de gráfico dos gastos pagos por categoria.
+  “Imprimir / Salvar PDF” usa a impressão nativa, com layout próprio e opção de
+  incluir detalhes. Não exige bibliotecas ou serviços externos para gerar PDF.
+- **Histórico:** o botão Atividades mostra cadastros, diferenças antes/depois de
+  edições, pagamentos, previsões e pausa/retomada de recorrência. Os eventos são
+  gravados na mesma transação das operações. Excluir uma conta permitida preserva
+  seu rastro no histórico global do Perfil. O histórico é somente de leitura.
+- **Perfil:** resumo financeiro pessoal, atividade paginada e exportação JSON
+  autenticada dos próprios dados. A exportação não contém senha/hash ou JWT;
+  é para consulta, sem importação/restauração automática.
+- **Configurações:** categoria padrão para novos cadastros, primeiro dia da semana
+  no calendário e preferência por relatório detalhado, persistidos por usuário.
+
+O relatório distingue **contas por vencimento** de **pagamentos por data de
+pagamento**, inclusive pagamentos de contas de outros meses. O saldo e a
+categoria são os atuais: não é um fechamento contábil histórico. Encargos são os
+efetivamente registrados; juros simulados não são somados aos totais.
+
+Migração aditiva `20261102020000_categorias_historico_relatorios`: preserva dados,
+adiciona categoria, preferências e histórico e importa somente fatos conhecidos
+de cadastros e pagamentos anteriores. Edições e pausas antigas não podem ser
+reconstruídas e não são inventadas. O Compose aplica a migração automaticamente.
+
+Validação e roteiro: [categorias, calendário e rastreabilidade](docs/relatorio-categorias-calendario.md).
+
+| Método | Endpoint autenticado | Resultado |
+| --- | --- | --- |
+| GET | `/api/accounts?categoria=MORADIA` | Contas da categoria do usuário |
+| GET | `/api/accounts/:id/history` | Eventos da conta, somente do proprietário |
+| GET | `/api/accounts/history` | Atividade de todas as contas próprias, inclusive excluídas |
+| GET | `/api/accounts/reports/monthly?mes=2026-11` | Relatório mensal em snapshot consistente |
+| GET | `/api/users/me/summary` | Indicadores pessoais |
+| GET | `/api/users/me/export` | Exportação JSON dos dados próprios |
 
 ## Execução manual (Node.js local + banco no Docker)
 

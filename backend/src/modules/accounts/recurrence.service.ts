@@ -3,6 +3,7 @@ import { prisma } from '../../lib/prisma.js';
 import { transaction } from '../../jobs/transaction.js';
 import { AccountError, nextDue } from './accounts.service.js';
 import { businessDay } from '../notifications/dates.js';
+import { accountSnapshot, recordAccountHistory } from './history.service.js';
 
 /** Same Conta chain and unique origemId as payments. Forecast is independent of payment. */
 export async function extendRecurrence(tx: Prisma.TransactionClient, initial: Conta, now = businessDay()) {
@@ -17,7 +18,8 @@ export async function extendRecurrence(tx: Prisma.TransactionClient, initial: Co
     if (due > horizon) break;
     const existing = await tx.conta.findUnique({ where: { origemId: current.id } });
     if (existing) { current = existing; i--; continue; }
-    current = await tx.conta.upsert({ where: { origemId: current.id }, update: {}, create: { origemId: current.id, usuarioId: current.usuarioId, descricao: current.descricao, valor: current.valor, vencimento: due, tipo: 'RECORRENTE', recorrencia: 'MENSAL', recorrenciaAtiva: true, diaRecorrencia: current.diaRecorrencia ?? current.vencimento.getUTCDate() } });
+    current = await tx.conta.upsert({ where: { origemId: current.id }, update: {}, create: { origemId: current.id, usuarioId: current.usuarioId, descricao: current.descricao, categoria: current.categoria, valor: current.valor, vencimento: due, tipo: 'RECORRENTE', recorrencia: 'MENSAL', recorrenciaAtiva: true, diaRecorrencia: current.diaRecorrencia ?? current.vencimento.getUTCDate() } });
+    await recordAccountHistory(tx, current, 'RECORRENCIA_GERADA', { depois: accountSnapshot(current) });
     created++;
   }
   return created;
@@ -43,10 +45,12 @@ export async function setRecurrenceActive(usuarioId: string, id: string, ativa: 
     await tx.$queryRaw`SELECT id FROM contas WHERE id = ${rootId} FOR UPDATE`;
     const root = await tx.conta.findUnique({ where: { id: rootId } });
     if (!root || root.tipo !== 'RECORRENTE') throw new AccountError('Conta não é recorrente', 400);
-    await tx.$executeRaw`WITH RECURSIVE series AS (
+    if (root.recorrenciaAtiva === ativa) return { ativa };
+    const affected = await tx.$queryRaw<{id:string;usuario_id:string;descricao:string}[]>`WITH RECURSIVE series AS (
       SELECT id FROM contas WHERE id = ${rootId} AND usuario_id = ${usuarioId}
       UNION ALL SELECT c.id FROM contas c JOIN series s ON c.origem_id = s.id WHERE c.usuario_id = ${usuarioId}
-    ) UPDATE contas SET recorrencia_ativa = ${ativa}, atualizado_em = NOW() WHERE id IN (SELECT id FROM series)`;
+    ) UPDATE contas SET recorrencia_ativa = ${ativa}, atualizado_em = NOW() WHERE id IN (SELECT id FROM series) RETURNING id, usuario_id, descricao`;
+    for (const account of affected) await recordAccountHistory(tx, {id:account.id,usuarioId:account.usuario_id,descricao:account.descricao}, ativa ? 'RECORRENCIA_RETOMADA' : 'RECORRENCIA_PAUSADA', { recorrenciaAtiva: ativa, observacao: 'Alteração aplicada a toda a série.' });
     return { ativa };
   });
 }
