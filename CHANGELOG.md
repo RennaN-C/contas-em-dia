@@ -1,6 +1,6 @@
 # Histórico de versões
 
-## Não lançado
+## 1.0.1 — 2026-11-02
 
 ### Correções
 

@@ -1,6 +1,6 @@
 # Saldo +
 
-Versão estável **1.0.0**. Consulte o [histórico de versões](CHANGELOG.md).
+Versão estável **1.0.1**. Consulte o [histórico de versões](CHANGELOG.md).
 
 Sistema de finanças pessoais para cadastro de contas recorrentes e avulsas, controle de vencimentos, pagamentos, avisos automáticos e estimativa de juros de atraso com integração à BrasilAPI.
 
