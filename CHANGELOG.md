@@ -1,5 +1,17 @@
 # Histórico de versões
 
+## Não lançado
+
+### Correções
+
+- Codifica identificadores recebidos da API antes de compor URLs dos testes.
+- Usa caminho absoluto para executar Docker nos scripts de validação.
+- Define explicitamente os botões de envio dos formulários e associa rótulos e descrições às preferências.
+- Substitui foco automático global por foco controlado dentro dos modais.
+- Oferece botões nativos para rolar tabelas por teclado, mantendo o layout de impressão.
+- Remove funções `async` sem operação `await` e trata a rejeição do teste de navegador.
+- Acrescenta testes de regressão para foco, rótulos e rolagem sem envio acidental de formulário.
+
 ## 1.0.0 — 2026-11-02
 
 Primeira versão estável do Saldo +.

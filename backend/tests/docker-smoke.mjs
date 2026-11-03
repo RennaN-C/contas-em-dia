@@ -2,13 +2,16 @@
 import assert from 'node:assert/strict';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
+import { isAbsolute } from 'node:path';
 import { setTimeout } from 'node:timers/promises';
 
 if (!process.env.COMPOSE_PROJECT_NAME?.startsWith('saldo-smoke-')) {
   throw new Error('Use um projeto descartável COMPOSE_PROJECT_NAME=saldo-smoke-...');
 }
 const origin = process.env.SALDO_SMOKE_URL ?? 'http://127.0.0.1:5174';
-const compose = (...args) => execFileSync('docker', ['compose', ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+const dockerExecutable = process.env.DOCKER_EXECUTABLE ?? '/usr/bin/docker';
+if (!isAbsolute(dockerExecutable)) throw new Error('DOCKER_EXECUTABLE must be an absolute path');
+const compose = (...args) => execFileSync(dockerExecutable, ['compose', ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
 async function api(path, method = 'GET', body, token) {
   return fetch(`${origin}/api${path}`, {
     method, signal: AbortSignal.timeout(10_000),
@@ -44,8 +47,8 @@ const created = await api('/accounts', 'POST', { descricao: 'Conta de validaçã
 assert.equal(created.status, 201);
 const { account } = await created.json();
 const payload = { valor: 40, encargos: .9, pagoEm: due, chave: randomUUID() };
-assert.equal((await api(`/accounts/${account.id}/payments`, 'POST', payload, token)).status, 201);
-assert.ok((await api(`/accounts/${account.id}/payments`, 'POST', payload, token)).ok);
+assert.equal((await api(`/accounts/${encodeURIComponent(account.id)}/payments`, 'POST', payload, token)).status, 201);
+assert.ok((await api(`/accounts/${encodeURIComponent(account.id)}/payments`, 'POST', payload, token)).ok);
 console.log('PASS cadastro, login, conta e pagamento idempotente via Nginx → API → PostgreSQL');
 
 compose('restart', 'backend');
@@ -58,7 +61,7 @@ const accounts = await api('/accounts', 'GET', undefined, token);
 assert.equal(accounts.status, 200, 'Sessão deve sobreviver à recriação do container');
 const data = await accounts.json();
 assert.equal(data.accounts.find(row => row.id === account.id)?.saldo, 60);
-const payments = await (await api(`/payments?contaId=${account.id}`, 'GET', undefined, token)).json();
+const payments = await (await api(`/payments?contaId=${encodeURIComponent(account.id)}`, 'GET', undefined, token)).json();
 assert.equal(payments.payments.length, 1);
 assert.equal(Number(payments.payments[0].encargos), .9);
 console.log('PASS chave, sessão, saldo e histórico preservados após restart e recriação');

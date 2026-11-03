@@ -7,12 +7,14 @@ if (!process.env.COMPOSE_PROJECT_NAME?.startsWith('saldo-smoke-') || !process.en
 const { chromium } = require(path.join(process.env.SALDO_QA_TOOLS, 'node_modules/playwright'));
 const { default: AxeBuilder } = require(path.join(process.env.SALDO_QA_TOOLS, 'node_modules/@axe-core/playwright'));
 const origin = process.env.SALDO_UI_URL;
+const dockerExecutable = process.env.DOCKER_EXECUTABLE ?? '/usr/bin/docker';
+if (!path.isAbsolute(dockerExecutable)) throw new Error('DOCKER_EXECUTABLE must be an absolute path');
 async function accessibility(page, label) {
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
   assert.deepEqual(results.violations.map(v => ({ id: v.id, targets: v.nodes.map(n => n.target) })), [], label);
 }
 (async () => {
-  execFileSync('docker', ['compose', 'exec', '-T', 'db', 'psql', '-U', 'contasedia', '-d', 'contasedia', '-c',
+  execFileSync(dockerExecutable, ['compose', 'exec', '-T', 'db', 'psql', '-U', 'contasedia', '-d', 'contasedia', '-c',
     "INSERT INTO taxas_referencia (chave,taxa_anual,fonte,consultada_em) VALUES ('SELIC',15,'Taxa fictícia QA',NOW()) ON CONFLICT (chave) DO UPDATE SET taxa_anual=15,fonte='Taxa fictícia QA',consultada_em=NOW();"], { stdio: 'pipe' });
   const browser = await chromium.launch({ executablePath: process.env.SALDO_CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true });
   try {
@@ -81,9 +83,9 @@ async function accessibility(page, label) {
     await dialog.getByRole('button', { name: 'Confirmar pagamento', exact: true }).click();
     await dialog.getByRole('heading', { name: 'Pagamento registrado', exact: true }).waitFor();
     assert.match(await dialog.locator('.receipt-total').textContent(), /30,37/);
-    const payments = await (await fetch(`${origin}/api/payments?contaId=${account.id}`, { headers: { Authorization: `Bearer ${session.token}` } })).json();
+    const payments = await (await fetch(`${origin}/api/payments?contaId=${encodeURIComponent(account.id)}`, { headers: { Authorization: `Bearer ${session.token}` } })).json();
     assert.equal(payments.payments.length, 1); assert.equal(Number(payments.payments[0].valor), 30); assert.equal(Number(payments.payments[0].encargos), .37);
-    const fresh = await (await fetch(`${origin}/api/accounts/${account.id}`, { headers: { Authorization: `Bearer ${session.token}` } })).json();
+    const fresh = await (await fetch(`${origin}/api/accounts/${encodeURIComponent(account.id)}`, { headers: { Authorization: `Bearer ${session.token}` } })).json();
     assert.equal(fresh.account.saldo, 30);
     assert.deepEqual(errors, []);
     console.log('PASS Chrome: cadastro → login preenchido → preferências persistidas → encargos automáticos parciais → confirmação → histórico e saldo');

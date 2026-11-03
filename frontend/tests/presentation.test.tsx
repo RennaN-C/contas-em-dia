@@ -7,15 +7,17 @@ const {login}=vi.hoisted(()=>({login:vi.fn()}));
 vi.mock('../src/features/auth/useAuth',()=>({useAuth:()=>({user:{id:'user',nome:'Rennan',email:'rennan@example.org'},login,logout:vi.fn()})}));
 vi.mock('../src/features/auth/auth.service',()=>({updateCurrentUser:vi.fn(),registerUser:vi.fn()}));
 vi.mock('../src/features/messages/messages.api',()=>({messagesApi:{list:vi.fn(),read:vi.fn(),readAll:vi.fn()}}));
+vi.mock('../src/services/api',async original=>({...await original<typeof import('../src/services/api')>(),api:vi.fn()}));
 import {ProfilePage} from '../src/pages/ProfilePage';
 import {RegisterForm} from '../src/features/auth/RegisterForm';
 import {Messages} from '../src/features/messages/Messages';
 import {updateCurrentUser,registerUser} from '../src/features/auth/auth.service';
 import {saveSession} from '../src/features/auth/session';
 import {messagesApi,type Message} from '../src/features/messages/messages.api';
+import {api} from '../src/services/api';
 (globalThis as {IS_REACT_ACT_ENVIRONMENT?:boolean}).IS_REACT_ACT_ENVIRONMENT=true;
 let container:HTMLDivElement,root:Root;
-beforeEach(()=>{vi.resetAllMocks();localStorage.clear();container=document.createElement('div');document.body.append(container);root=createRoot(container);});
+beforeEach(()=>{vi.resetAllMocks();vi.mocked(api).mockResolvedValue({summary:{contas:0,quitadas:0,atrasadas:0,saldoPendente:0,pagamentos:0,totalPago:0,mensagensNaoLidas:0}});localStorage.clear();container=document.createElement('div');document.body.append(container);root=createRoot(container);});
 afterEach(()=>{act(()=>root.unmount());container.remove();});
 async function render(node:ReactNode){await act(async()=>root.render(<MemoryRouter>{node}</MemoryRouter>));}
 async function submit(){await act(async()=>container.querySelector('form')!.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));}

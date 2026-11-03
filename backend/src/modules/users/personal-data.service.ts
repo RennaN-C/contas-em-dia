@@ -13,7 +13,7 @@ export async function personalSummary(usuarioId: string) {
     saldoPendente: balance / 100, pagamentos: payments.length,
     totalPago: payments.reduce((sum, row) => sum + cents(row.valor) + cents(row.encargos), 0) / 100, mensagensNaoLidas: unread };
 }
-export async function exportPersonalData(usuarioId: string) {
+export function exportPersonalData(usuarioId: string) {
   return prisma.$transaction(async tx => ({
     formato: 'saldo-plus-dados-v1', exportadoEm: new Date().toISOString(),
     usuario: await tx.usuario.findUniqueOrThrow({ where: { id: usuarioId }, select: { id: true, nome: true, email: true, criadoEm: true, atualizadoEm: true } }),

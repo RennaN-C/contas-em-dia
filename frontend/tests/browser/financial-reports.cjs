@@ -31,7 +31,7 @@ async function accessibility(page, label) {
   const nextMonth = next.toISOString().slice(0, 7);
   for (let i = 1; i <= 13; i++) {
     const { account } = await request('/accounts', 'POST', { descricao: `Relatório ${String(i).padStart(2, '0')}`, valor: 100, vencimento: i === 13 ? `${nextMonth}-01` : today, tipo: 'AVULSA', recorrencia: null }, token);
-    await request(`/accounts/${account.id}/payments`, 'POST', { valor: 40, encargos: .9, pagoEm: today, chave: crypto.randomUUID() }, token);
+    await request(`/accounts/${encodeURIComponent(account.id)}/payments`, 'POST', { valor: 40, encargos: .9, pagoEm: today, chave: crypto.randomUUID() }, token);
   }
   const browser = await chromium.launch({ executablePath: process.env.SALDO_CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true });
   try {

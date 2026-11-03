@@ -8,7 +8,7 @@ export function monthRange(month: string) {
   const [year, number] = valid.split('-').map(Number) as [number, number];
   return { start: new Date(Date.UTC(year, number - 1, 1)), end: new Date(Date.UTC(year, number, 1)) };
 }
-export async function monthlyReport(usuarioId: string, month: string) {
+export function monthlyReport(usuarioId: string, month: string) {
   const { start, end } = monthRange(month);
   // A single snapshot keeps balances and payments coherent during concurrent writes.
   return prisma.$transaction(async tx => {

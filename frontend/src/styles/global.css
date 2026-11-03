@@ -528,6 +528,10 @@ caption { text-align: left; padding-block: .5rem; }
 .monthly-report .report-total,.monthly-report .report-method,.monthly-report .report-footer,.report-identification p { max-width: none; }
 .report-identification p { overflow-wrap: anywhere; }
 .monthly-report [role=region]:focus-visible { outline: 2px solid #176a53; outline-offset: 3px; }
+.table-scroll-controls { position: sticky; left: 0; display: flex; align-items: center; gap: .5rem; width: fit-content; padding: .3rem; color: #526e5c; font-size: .75rem; }
+.table-scroll-controls button { min-width: 44px; min-height: 44px; }
+.setting-copy label { cursor: pointer; font-size: .83rem; font-weight: 600; }
+.setting-copy small { font-size: .74rem; line-height: 1.6; color: #58705f; display: block; font-weight: 400; margin-top: .25rem; }
 .monthly-report .table-scroll { background: #fff; border-radius: 10px; padding: .5rem; margin-block: 1rem; }.monthly-report table { min-width: 620px; width: 100%; }.monthly-report caption { text-align: left; font-weight: 600; padding: .7rem; }
 .profile-summary { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1rem; }.profile-summary dt { font-size: .75rem; color: #526e5c; }.profile-summary dd { margin: .5rem 0 0; font-size: 1.3rem; font-weight: 650; font-variant-numeric: tabular-nums; }
 .personal-data-panels { display: grid; gap: 1.3rem; }.personal-data-panels button { font-size: .8rem; min-height: 44px; }.settings-shortcuts { display: flex; flex-wrap: wrap; gap: 1rem; font-size: .8rem; }

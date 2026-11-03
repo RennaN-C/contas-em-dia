@@ -174,4 +174,4 @@ async function visible(locator) { await locator.waitFor({ state: 'visible', time
     report.finishedAt = new Date().toISOString(); fs.writeFileSync(path.join(output, 'results.json'), JSON.stringify(report, null, 2)); await browser.close();
     console.log(JSON.stringify({ status: report.status, steps: report.steps.length, realSelic: report.realSelic, errors: report.errors.length }));
   }
-})();
+})().catch(error => { console.error(error); process.exitCode = 1; });

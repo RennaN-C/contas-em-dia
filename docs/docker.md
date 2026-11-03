@@ -111,6 +111,9 @@ e recriação do backend. Confirma que a sessão, o saldo e a chave persistem.
 
 O script exige `COMPOSE_PROJECT_NAME` com prefixo `saldo-smoke-` para evitar
 execução acidental em um projeto pessoal. Use sempre banco e volumes descartáveis.
+Os scripts que executam Docker usam `/usr/bin/docker` por padrão. No Windows,
+informe o caminho absoluto: `$env:DOCKER_EXECUTABLE=(Get-Command docker).Source`.
+Isso evita procurar executáveis no `PATH` dentro desses scripts.
 O teste de navegador `frontend/tests/browser/financial-reports.cjs` valida filtros,
 totais, CSV e paginação no Chrome, com verificações de acessibilidade em desktop/mobile;
 exige ferramentas externas em `SALDO_QA_TOOLS` e URL isolada em `SALDO_UI_URL`.
