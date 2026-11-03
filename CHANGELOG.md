@@ -5,6 +5,7 @@
 ### Correções
 
 - Codifica identificadores recebidos da API antes de compor URLs dos testes.
+- Restringe as requisições dos testes às rotas e UUIDs previstos e rejeita redirecionamentos, com casos de regressão para caminhos inválidos.
 - Usa caminho absoluto para executar Docker nos scripts de validação.
 - Define explicitamente os botões de envio dos formulários e associa rótulos e descrições às preferências.
 - Substitui foco automático global por foco controlado dentro dos modais.

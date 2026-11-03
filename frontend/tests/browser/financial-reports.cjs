@@ -10,7 +10,10 @@ const { default: AxeBuilder } = require(path.join(process.env.SALDO_QA_TOOLS, 'n
 const origin = process.env.SALDO_UI_URL;
 const email = `browser.${crypto.randomUUID()}@example.org`, senha = crypto.randomBytes(20).toString('hex');
 async function request(route, method = 'GET', body, token) {
-  const response = await fetch(`${origin}/api${route}`, { method, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
+  if (!/^\/(?:auth\/(?:register|login)|accounts(?:\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/payments)?)$/.test(route)) {
+    throw new Error('Rota de teste não permitida');
+  }
+  const response = await fetch(`${origin}/api${route}`, { method, redirect: 'error', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
   assert.ok(response.ok, `${method} ${route}: ${response.status}`);
   return response.json();
 }
@@ -24,6 +27,9 @@ async function accessibility(page, label) {
   assert.deepEqual(result.violations.map(v => ({ id: v.id, targets: v.nodes.map(n => n.target) })), [], label);
 }
 (async () => {
+  for (const route of ['/accounts/../auth/login', '//example.org', '/accounts/invalid/payments', '/accounts?extra=1']) {
+    await assert.rejects(() => request(route), /Rota de teste não permitida/);
+  }
   await request('/auth/register', 'POST', { nome: 'Validação Financeira', email, senha });
   const { token } = await request('/auth/login', 'POST', { email, senha });
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());

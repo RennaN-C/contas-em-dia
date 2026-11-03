@@ -13,8 +13,11 @@ const dockerExecutable = process.env.DOCKER_EXECUTABLE ?? '/usr/bin/docker';
 if (!isAbsolute(dockerExecutable)) throw new Error('DOCKER_EXECUTABLE must be an absolute path');
 const compose = (...args) => execFileSync(dockerExecutable, ['compose', ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
 async function api(path, method = 'GET', body, token) {
+  if (!/^\/(?:ready|auth\/(?:register|login)|accounts(?:\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/payments)?|payments\?contaId=[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/.test(path)) {
+    throw new Error('Rota de teste não permitida');
+  }
   return fetch(`${origin}/api${path}`, {
-    method, signal: AbortSignal.timeout(10_000),
+    method, redirect: 'error', signal: AbortSignal.timeout(10_000),
     headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     ...(body ? { body: JSON.stringify(body) } : {})
   });
@@ -29,6 +32,9 @@ async function ready() {
 const fingerprint = () => compose('exec', '-T', 'backend', 'node', '-e',
   "const fs=require('fs'),crypto=require('crypto');const contents=fs.readFileSync('/app/runtime/.env','utf8');if(!/^JWT_SECRET=[a-f0-9]{64}\\n$/.test(contents))process.exit(1);console.log(crypto.createHash('sha256').update(contents).digest('hex'))").trim();
 
+for (const route of ['/accounts/../auth/login', '//example.org', '/accounts/invalid/payments', '/payments?contaId=x&extra=1']) {
+  await assert.rejects(() => api(route), /Rota de teste não permitida/);
+}
 await ready();
 const firstKey = fingerprint();
 const html = await fetch(origin);
