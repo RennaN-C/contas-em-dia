@@ -1,0 +1,6 @@
+# Opcional: apenas para executar backend/frontend no Windows com o banco no Docker.
+# Nao utilizado no modo Docker Compose completo.
+services:
+  db:
+    ports:
+      - "127.0.0.1:55433:5432"

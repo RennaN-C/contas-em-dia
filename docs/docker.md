@@ -29,8 +29,9 @@ Mantenha a chave somente no arquivo local: ela não deve ser publicada.
 Como uma chave anterior já foi compartilhada numa conversa, gere uma nova.
 O `DATABASE_URL` nesse arquivo pode continuar com `localhost:5432`
 para execução manual: **o Compose a substitui por `db:5432` dentro do
-backend container**. A porta 5432 do Windows fica acessível apenas em
-`127.0.0.1`.
+backend container**. A porta 5432 **não é publicada no Windows** no modo Docker completo:
+PostgreSQL fica acessível apenas na rede interna do Compose. Isso evita
+conflitos com uma instalação local do PostgreSQL.
 
 ```powershell
 docker compose up -d --build --wait
@@ -61,9 +62,9 @@ docker compose logs -f --tail=100 db
 Se `backend` não iniciar, confirme a existência de `backend/.env`
 e que `JWT_SECRET` não seja a chave de exemplo. Quando um container
 usar `NODE_ENV=production`, o backend exige chave forte de pelo menos
-32 caracteres. Se a porta `5432`, `3000` ou `5174` já estiver em
-uso por um serviço instalado no Windows, pare o serviço concorrente
-antes de iniciar a stack.
+32 caracteres. Se a porta `3000` ou `5174` já estiver em uso por um serviço no Windows,
+pare o serviço concorrente antes de iniciar a stack. A porta `5432` não
+é publicada no modo Docker completo.
 
 Não instale Prisma 8 por fora. O projeto usa a versão 6 do lockfile
 e executa a CLI dentro do container. Se modificar o código, reconstrua
@@ -96,10 +97,19 @@ cadastrada. Não use essa substituição de ambiente num deploy público.
 
 ## Alternativa: rodar Node.js no Windows
 
-O [README principal](../README.md) também contém a execução manual
-com `docker compose up -d db` e `npm run dev` no backend/frontend.
-Esse modo usa as portas `3000`, `5174` e `5432` diretamente no host.
-Não inicie os dois modos ao mesmo tempo: as portas entrarão em conflito.
+O [README principal](../README.md) contém o modo de execução manual.
+Para expor **apenas o banco** à máquina anfitriã sem ocupar a porta 5432,
+use na raiz:
+
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.dev-db.yml up -d db
+```
+
+Nesse modo, no `backend/.env` configure a `DATABASE_URL` para
+`localhost:55433`, e inicie `npm run dev` no backend (porta 3000)
+e no frontend (porta 5174). O arquivo opcional
+`docker-compose.dev-db.yml` não é usado quando se inicia tudo pelo Docker.
+Não execute frontend/backend manuais junto com os containers completos.
 
 ## Validação automática
 
@@ -107,3 +117,15 @@ O workflow `.github/workflows/ci.yml` inclui o job `docker-smoke`
 que constrói as imagens, aguarda os três health checks e verifica
 HTTP no frontend, API direta e API pelo proxy. Ele usa um `.env`
 descartável gerado no runner e não acessa o banco local.
+
+## Dois computadores e Git
+
+Cada computador tem seu próprio `backend/.env` (não versionado), suas
+próprias imagens e volume do banco. Um `git pull origin develop` atualiza
+o **código**, mas não copia contas, pagamentos, usuários nem senhas.
+Mantenha a mesma chave JWT apenas enquanto precisar preservar sessões
+naquela máquina. Se uma chave foi enviada ao GitHub, substitua-a por
+uma nova e reinicie os containers; não versione a chave no `.env.example`.
+
+Antes da apresentação, faça o ensaio com o banco e a conta de demonstração
+do computador que será usado na faculdade.

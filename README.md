@@ -48,7 +48,7 @@ docker compose ps
 
 - **Aplicação:** http://localhost:5174
 - **API:** http://localhost:5174/api/health (também http://localhost:3000/api/health)
-- **PostgreSQL:** localhost:5432, acessível somente no próprio computador.
+- **PostgreSQL:** disponível apenas na rede interna do Docker (`db:5432`). Isso evita conflito com o PostgreSQL instalado no Windows.
 
 O backend aplica as migrações Prisma automaticamente antes de iniciar; não é
 necessário executar `npm ci`, `prisma generate` ou `npm run dev` no Windows.
@@ -58,11 +58,16 @@ preservar as contas cadastradas.
 
 ## Execução manual (Node.js local + banco no Docker)
 
+Use o arquivo opcional `docker-compose.dev-db.yml` para disponibilizar **somente o PostgreSQL** na porta 55433 do Windows, evitando conflito com a porta 5432.
+
 1. Copie `backend/.env.example` para `backend/.env` e `frontend/.env.example` para `frontend/.env`.
-2. Execute `docker compose up -d db`.
-3. Instale as dependências com `npm ci` em `backend/` e `frontend/` (Node 24 recomendado).
-4. No backend, execute `npx prisma generate`, `npx prisma migrate deploy` e depois `npm run dev`.
-5. No frontend, execute `npm run dev`.
+2. Execute `docker compose -f docker-compose.yml -f docker-compose.dev-db.yml up -d db`.
+3. Para esse modo manual, configure `DATABASE_URL="postgresql://contasedia:contasedia_local@localhost:55433/contasedia?schema=public"` no `backend/.env`.
+4. Instale as dependências com `npm ci` em `backend/` e `frontend/` (Node 24 recomendado).
+5. No backend, execute `npx prisma generate`, `npx prisma migrate deploy` e depois `npm run dev`.
+6. No frontend, execute `npm run dev -- --port 5174`.
+
+Para voltar ao modo **100% Docker**, pare o backend/frontend manuais e execute `docker compose up -d --build --wait`. Não inicie ambos os modos simultaneamente.
 
 ## Contas e pagamentos (Marcelo — #10–#21)
 
