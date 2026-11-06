@@ -1,6 +1,7 @@
 import { api } from '../../services/api';
-export type Account = {id:string;descricao:string;valor:string;vencimento:string;tipo:'AVULSA'|'RECORRENTE';recorrencia:string|null;recorrenciaAtiva?:boolean;origemId?:string|null;status:string;saldo:number};
-export type AccountInput = {descricao:string;valor:number;vencimento:string;tipo:'AVULSA'|'RECORRENTE';recorrencia:'MENSAL'|null};
+import type {Category} from './categories';
+export type Account = {id:string;descricao:string;categoria?:Category;valor:string;vencimento:string;tipo:'AVULSA'|'RECORRENTE';recorrencia:string|null;recorrenciaAtiva?:boolean;origemId?:string|null;status:string;saldo:number};
+export type AccountInput = {descricao:string;categoria?:Category;valor:number;vencimento:string;tipo:'AVULSA'|'RECORRENTE';recorrencia:'MENSAL'|null};
 export const accountsApi = {
  list:(status='')=>api<{accounts:Account[]}>(`/accounts${status?`?status=${status}`:''}`),
  save:(data:AccountInput,id?:string)=>api(`/accounts${id?`/${id}`:''}`,{method:id?'PUT':'POST',body:JSON.stringify(data)}),

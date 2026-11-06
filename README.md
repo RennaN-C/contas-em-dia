@@ -1,5 +1,7 @@
 # Saldo +
 
+Versão estável **1.0.1**. Consulte o [histórico de versões](CHANGELOG.md).
+
 Sistema de finanças pessoais para cadastro de contas recorrentes e avulsas, controle de vencimentos, pagamentos, avisos automáticos e estimativa de juros de atraso com integração à BrasilAPI.
 
 O **Saldo +** inclui painel com indicadores financeiros, gráficos dos últimos
@@ -32,18 +34,14 @@ A divisão de responsabilidades e a estrutura obrigatória do projeto estão em 
 
 ## Docker Compose — sistema completo
 
-Para subir **PostgreSQL + backend + frontend** em um único comando, use o
-[guia de execução Docker](docs/docker.md). Na primeira utilização, crie
-`backend/.env` a partir de `backend/.env.example` e substitua `JWT_SECRET`
-por uma chave aleatória (mínimo 32 caracteres). As variáveis locais do backend
-são lidas pelo Compose, mas `DATABASE_URL` é substituída internamente para
-o host `db` do Docker.
+Com Docker Desktop em execução e Docker Compose **2.24 ou superior**, basta
+iniciar a stack. **Não é necessário criar `.env`, instalar Node ou executar
+migrações manualmente.** Consulte o [guia Docker](docs/docker.md).
 
 Na raiz do repositório:
 
 ```powershell
 docker compose up -d --build --wait
-docker compose ps
 ```
 
 - **Aplicação:** http://localhost:5174
@@ -52,9 +50,72 @@ docker compose ps
 
 O backend aplica as migrações Prisma automaticamente antes de iniciar; não é
 necessário executar `npm ci`, `prisma generate` ou `npm run dev` no Windows.
+Na primeira execução, gera uma chave JWT aleatória em `.env` dentro do volume
+`runtime_config`; a chave é preservada nas reinicializações e reconstruções.
+Se já existir `backend/.env`, sua `JWT_SECRET` continua sendo respeitada e deve
+atender aos requisitos de produção. O Compose configura o acesso interno ao banco.
 Os dados permanecem no volume `postgres_data`. Para desligar sem apagar
 dados: `docker compose down`. **Não use `docker compose down -v`** se quiser
 preservar as contas cadastradas.
+
+### Organização e relatórios
+
+- **Contas:** busca que ignora acentos, filtros combinados por status, mês do
+  vencimento e tipo, limpeza de filtros e resumo do saldo, atraso e principal pago.
+- **Pagamentos:** totais do principal, encargos e desembolso dos resultados filtrados.
+- **Listas paginadas:** 12 registros por página; resumos e CSV incluem todos os
+  resultados do filtro, inclusive os de outras páginas.
+- **Exportação de contas e pagamentos:** CSV com proteção contra fórmulas de planilha.
+- **Operação:** API sem usuário root, encerramento com SIGTERM/SIGINT, prontidão
+  com consulta ao PostgreSQL em `/api/ready` e proxy que acompanha a recriação do backend.
+
+Resultados desta entrega: [validação de relatórios e Docker](docs/relatorio-relatorios-docker.md).
+
+### Categorias, calendário, relatório mensal e histórico
+
+- **Categorias:** Moradia, Estudos, Transporte, Saúde, Assinaturas, Alimentação,
+  Lazer e Outras. Cadastro e edição incluem categoria; as contas antigas recebem
+  Outras. O filtro combina categoria com descrição, tipo, status e mês. Em Contas,
+  “Ver distribuição por categoria” mostra os valores previstos dos resultados.
+  Novas competências recorrentes herdam a categoria da conta de origem; edições
+  continuam afetando somente o lançamento editado.
+- **Calendário (`/calendario`):** navegação mensal, filtro por categoria e destaque
+  textual e visual de pagas, pendentes e atrasadas. Selecionar um dia apresenta
+  suas contas; os detalhes incluem pagamentos e histórico de alterações.
+- **Relatório (`/relatorios`):** previsto, saldo atual das contas do mês, principal,
+  encargos e total desembolsado, além de gráfico dos gastos pagos por categoria.
+  “Imprimir / Salvar PDF” usa a impressão nativa, com layout próprio e opção de
+  incluir detalhes. Não exige bibliotecas ou serviços externos para gerar PDF.
+- **Histórico:** o botão Atividades mostra cadastros, diferenças antes/depois de
+  edições, pagamentos, previsões e pausa/retomada de recorrência. Os eventos são
+  gravados na mesma transação das operações. Excluir uma conta permitida preserva
+  seu rastro no histórico global do Perfil. O histórico é somente de leitura.
+- **Perfil:** resumo financeiro pessoal, atividade paginada e exportação JSON
+  autenticada dos próprios dados. A exportação não contém senha/hash ou JWT;
+  é para consulta, sem importação/restauração automática.
+- **Configurações:** categoria padrão para novos cadastros, primeiro dia da semana
+  no calendário e preferência por relatório detalhado, persistidos por usuário.
+
+O relatório distingue **contas por vencimento** de **pagamentos por data de
+pagamento**, inclusive pagamentos de contas de outros meses. O saldo e a
+categoria são os atuais: não é um fechamento contábil histórico. Encargos são os
+efetivamente registrados; juros simulados não são somados aos totais.
+
+Migração aditiva `20261102020000_categorias_historico_relatorios`: preserva dados,
+adiciona categoria, preferências e histórico e importa somente fatos conhecidos
+de cadastros e pagamentos anteriores. Edições e pausas antigas não podem ser
+reconstruídas e não são inventadas. O Compose aplica a migração automaticamente.
+
+Validação e roteiro: [categorias, calendário e rastreabilidade](docs/relatorio-categorias-calendario.md).
+
+| Método | Endpoint autenticado | Resultado |
+| --- | --- | --- |
+| GET | `/api/accounts?categoria=MORADIA` | Contas da categoria do usuário |
+| GET | `/api/accounts/:id/history` | Eventos da conta, somente do proprietário |
+| GET | `/api/accounts/history` | Atividade de todas as contas próprias, inclusive excluídas |
+| GET | `/api/accounts/reports/monthly?mes=2026-11` | Relatório mensal em snapshot consistente |
+| GET | `/api/users/me/summary` | Indicadores pessoais |
+| GET | `/api/users/me/export` | Exportação JSON dos dados próprios |
 
 ## Execução manual (Node.js local + banco no Docker)
 
@@ -83,6 +144,7 @@ O proprietário é extraído do JWT; campos adicionais, inclusive `usuarioId` e
 | PUT | `/api/accounts/:id` | Substitui campos editáveis, `{ account }` |
 | DELETE | `/api/accounts/:id` | 200, confirmação JSON; 409 se houver pagamentos ou série iniciada |
 | POST | `/api/accounts/:id/payments` | 201, `{ payment }` |
+| POST | `/api/accounts/:id/payments/preview` | Calcula encargos para `{ valor, pagoEm }`, sem gravar pagamento |
 | GET | `/api/payments?contaId=UUID` | `{ payments }`, data decrescente, criação decrescente e ID crescente |
 
 Cadastro/edição: `{ "descricao": "Aluguel", "valor": 1000.50,
@@ -371,10 +433,15 @@ total estimados, taxa/fonte e estado de consulta. **Pagar**, **Editar** e
 Cadastro, edição, pagamento, histórico e confirmação de exclusão abrem em modal
 central com foco contido, Escape, bloqueio do fundo e retorno ao botão de origem.
 
-Ao pagar, o modal mostra o principal e a estimativa de atraso. A preferência
-padrão solicita revisão antes da gravação. O valor da simulação **não é somado
-automaticamente ao débito nem ao pagamento**. Se foram cobrados juros/multa reais,
-marque **Também paguei encargos** e informe o valor efetivamente pago.
+Ao pagar, o modal mostra o principal e a estimativa de atraso. Ao marcar
+**Também paguei encargos**, o backend calcula os juros para o principal e a data
+do pagamento e o formulário preenche o valor e soma ao total, sem digitação.
+Pagamentos parciais recebem juros proporcionais ao principal amortizado;
+datas até o vencimento retornam encargos zero sem consultar a taxa.
+Pagamentos com encargos sempre passam pela revisão antes da gravação.
+O cálculo usa a Selic anual atual, como estimativa; se juros ou multa realmente
+cobrados forem diferentes, use **Informar outro valor**. Taxa indisponível
+oferece nova tentativa ou ajuste manual, sem criar uma taxa fictícia.
 
 `POST /api/accounts/:id/payments` aceita adicionalmente `encargos` opcional
 (não negativo, até duas casas; padrão zero). `valor` continua sendo o principal
@@ -386,10 +453,17 @@ Após gravar, é possível **Consultar histórico** ou concluir. Em **Pagamentos
 **Ver registro** abre os detalhes de cada pagamento. Trata-se do registro interno
 do sistema; não há emissão de comprovante bancário.
 
-Em **Configurações**, ordenação de contas, revisão antes de pagar e redução de
-animações são persistidas por usuário. Moeda, calendário e critérios financeiros
-são exibidos como referências. **Perfil** tem resumo pessoal e edição em modal;
-o cadastro apresenta orientações de senha e confirmação.
+Em **Configurações**, ordenação, tipo padrão de novas contas, revisão antes de
+pagar e redução de animações são persistidos por usuário. Há indicação de
+alterações não salvas, descarte e restauração de padrões antes de salvar.
+Moeda, calendário e critérios financeiros são exibidos como referências.
+**Perfil** tem resumo pessoal e edição em modal. O cadastro tem confirmação
+de senha com erro próprio, orientação de limite UTF-8, aviso de Caps Lock e
+próximos passos; o login recebe o e-mail preenchido após o cadastro.
+
+Migração aditiva `20261102010000_tipo_conta_padrao`: acrescenta a preferência
+de tipo de conta, preservando as contas e preferências existentes. É aplicada
+automaticamente na inicialização pelo Docker Compose.
 
 Migração aditiva `20261025030000_preferencias_encargos`: acrescenta encargos
 (zero nos pagamentos anteriores) e preferências por usuário, sem recalcular ou

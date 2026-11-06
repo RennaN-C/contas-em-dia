@@ -1,131 +1,125 @@
-# Saldo+ — execução completa com Docker Compose
+﻿# Saldo + — execução com Docker Compose
 
-O Compose inicia **PostgreSQL 15, API Node.js 24 e aplicação web React
-compilada e servida pelo Nginx**. Não é necessário executar Node ou Prisma
-manualmente no Windows.
-
-## Primeira execução (PowerShell)
-
+Requisitos: Docker Desktop aberto e Docker Compose 2.24 ou superior.
 Na raiz do repositório:
 
-```powershell
-git checkout develop
-git pull origin develop
-
-if (!(Test-Path .\backend\.env)) {
-    Copy-Item .\backend\.env.example .\backend\.env
-}
-notepad .\backend\.env
-```
-
-No arquivo `backend/.env`, defina uma `JWT_SECRET` aleatória com pelo
-menos 32 caracteres. Gere-a com:
-
-```powershell
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
-
-Mantenha a chave somente no arquivo local: ela não deve ser publicada.
-Como uma chave anterior já foi compartilhada numa conversa, gere uma nova.
-O `DATABASE_URL` nesse arquivo pode continuar com `localhost:5432`
-para execução manual: **o Compose a substitui por `db:5432` dentro do
-backend container**. A porta 5432 **não é publicada no Windows** no modo Docker completo:
-PostgreSQL fica acessível apenas na rede interna do Compose. Isso evita
-conflitos com uma instalação local do PostgreSQL.
-
-```powershell
+```sh
 docker compose up -d --build --wait
-docker compose ps
 ```
 
-Acesse:
+Acesse **http://localhost:5174** e cadastre seu usuário. Não é preciso instalar
+Node, copiar `.env`, gerar chaves ou executar Prisma no computador.
+`docker compose up` também constrói as imagens quando ainda não existem;
+use `--build` para incorporar alterações no código.
 
-- Site: http://localhost:5174
-- Health check pelo site: http://localhost:5174/api/health
-- API direta, para diagnóstico local: http://localhost:3000/api/health
+## Inicialização automática
 
-Os containers aguardam o banco ficar saudável. O backend executa
-`prisma migrate deploy` antes de iniciar a API e, por sua vez, o
-frontend só é iniciado quando a API estiver saudável. O frontend usa
-`/api` com proxy interno do Nginx: o navegador **não deve** tentar
-acessar `http://backend:3000`.
+1. PostgreSQL inicia e passa pelo healthcheck.
+2. O backend gera uma chave JWT aleatória de 256 bits na primeira execução,
+   em `/app/runtime/.env`, no volume `runtime_config`.
+3. Prisma aplica as migrações pendentes, sem apagar dados.
+4. A API inicia os agendamentos e confirma conexão com o banco em `/api/ready`.
+5. Nginx serve o frontend compilado e encaminha `/api` ao backend.
+
+A chave é reutilizada ao reiniciar, reconstruir ou recriar containers,
+preservando sessões ainda válidas. O backend executa como usuário `node`
+e recebe sinais de encerramento para fechar o servidor e a conexão Prisma.
+O Nginx resolve novamente o endereço do backend, permitindo sua recriação
+sem precisar reiniciar o frontend.
+
+## Endereços
+
+| Serviço | Endereço |
+| --- | --- |
+| Aplicação | http://localhost:5174 |
+| API via frontend | http://localhost:5174/api/health |
+| Prontidão e banco | http://localhost:5174/api/ready |
+| API direta para diagnóstico | http://localhost:3000/api/health |
+| PostgreSQL interno | `db:5432`, sem porta exposta no computador |
+
+As portas publicadas ficam restritas ao computador local. O Compose é destinado
+à execução local e mantém as credenciais locais do banco para compatibilidade
+com os volumes já existentes.
+
+## Configuração opcional
+
+O arquivo `backend/.env` é opcional no Docker. Se já existir, o Compose carrega
+suas variáveis e mantém a chave JWT configurada pelo usuário. Uma chave fornecida
+deve ser aleatória, com pelo menos 32 caracteres e diferente do exemplo;
+o backend recusa configuração inválida em produção.
+
+`DATABASE_URL`, `PORT`, `NODE_ENV`, `CORS_ORIGINS` e `TRUST_PROXY_HOPS` são definidos
+pelo Compose para a rede local. O frontend usa `/api`; o navegador não acessa
+`http://backend:3000` diretamente. O Nginx sobrescreve os cabeçalhos de IP e a
+API confia no único proxy dessa configuração.
+
+Para execução manual, os `.env.example` continuam disponíveis. O
+[README](../README.md) explica Node local com o PostgreSQL no Docker.
+
+## Dados e desligamento
+
+```sh
+docker compose down
+docker compose up -d --wait
+```
+
+Os volumes `postgres_data` (dados) e `runtime_config` (chave de sessão gerada)
+são preservados. **`docker compose down -v` apaga ambos.** Não o use para atualizar
+ou corrigir o sistema. Para atualizar o código, execute novamente:
+
+```sh
+docker compose up -d --build --wait
+```
 
 ## Diagnóstico
 
-```powershell
+```sh
 docker compose ps
 docker compose logs -f --tail=100 backend
 docker compose logs -f --tail=100 frontend
 docker compose logs -f --tail=100 db
 ```
 
-Se `backend` não iniciar, confirme a existência de `backend/.env`
-e que `JWT_SECRET` não seja a chave de exemplo. Quando um container
-usar `NODE_ENV=production`, o backend exige chave forte de pelo menos
-32 caracteres. Se a porta `3000` ou `5174` já estiver em uso por um serviço no Windows,
-pare o serviço concorrente antes de iniciar a stack. A porta `5432` não
-é publicada no modo Docker completo.
+- **Docker indisponível:** abra o Docker Desktop e aguarde o engine iniciar.
+- **Portas ocupadas:** pare processos que estejam usando 3000 ou 5174.
+- **JWT inválida:** se houver `backend/.env`, substitua a chave de exemplo por
+  uma aleatória. A geração automática é usada quando `JWT_SECRET` não foi fornecida.
+- **Migração falhou:** consulte os logs. Não apague o volume para resolver falhas.
+  Bancos anteriores criados com `db push` exigem o procedimento de baseline
+  descrito no README.
+- **Arquivo de chave corrompido:** o backend informa o erro e não troca a chave
+  silenciosamente. Verifique o volume `runtime_config` ou forneça sua chave em `.env`.
 
-Não instale Prisma 8 por fora. O projeto usa a versão 6 do lockfile
-e executa a CLI dentro do container. Se modificar o código, reconstrua
-as imagens com `docker compose up -d --build --wait`.
+## Demonstração opcional
 
-## Dados persistentes e desligamento
+Para preparar dados de apresentação, configure `DEMO_EMAIL` e `DEMO_PASSWORD`
+no `backend/.env` e execute, somente no ambiente local:
 
-```powershell
-docker compose down
-```
-
-A remoção dos containers **não remove os dados** do volume
-`postgres_data`. Evite `docker compose down -v` pois isso apagaria
-o volume do PostgreSQL. Para diagnosticar migrações, inspecione os logs
-do backend antes de reiniciar ou remover qualquer volume.
-
-## Demonstração acadêmica
-
-O seed demonstrativo `npm run demo` exige `NODE_ENV` diferente de
-`production`, para evitar criação acidental de dados de teste em
-ambientes publicados. **Somente na máquina local da apresentação**,
-preencha `DEMO_EMAIL` e `DEMO_PASSWORD` no `backend/.env` e execute:
-
-```powershell
+```sh
 docker compose run --rm -e NODE_ENV=development backend npm run demo
 ```
 
-Esse comando é opcional: pode fazer login com uma conta previamente
-cadastrada. Não use essa substituição de ambiente num deploy público.
+O comando preserva contas existentes e recusa usuários com senha diferente.
+O sistema não cria uma conta de demonstração ou senha de acesso padrão ao iniciar.
 
-## Alternativa: rodar Node.js no Windows
+## Verificação automatizada
 
-O [README principal](../README.md) contém o modo de execução manual.
-Para expor **apenas o banco** à máquina anfitriã sem ocupar a porta 5432,
-use na raiz:
+O job `docker-smoke` do GitHub Actions inicia a stack com banco vazio **sem `.env`**.
+Além dos healthchecks, executa `backend/tests/docker-smoke.mjs`, que valida
+cadastro, login, conta, pagamento parcial com encargos, idempotência, reinicialização
+e recriação do backend. Confirma que a sessão, o saldo e a chave persistem.
 
-```powershell
-docker compose -f docker-compose.yml -f docker-compose.dev-db.yml up -d db
-```
+O script exige `COMPOSE_PROJECT_NAME` com prefixo `saldo-smoke-` para evitar
+execução acidental em um projeto pessoal. Use sempre banco e volumes descartáveis.
+Os scripts que executam Docker usam `/usr/bin/docker` por padrão. No Windows,
+informe o caminho absoluto: `$env:DOCKER_EXECUTABLE=(Get-Command docker).Source`.
+Isso evita procurar executáveis no `PATH` dentro desses scripts.
+O teste de navegador `frontend/tests/browser/financial-reports.cjs` valida filtros,
+totais, CSV e paginação no Chrome, com verificações de acessibilidade em desktop/mobile;
+exige ferramentas externas em `SALDO_QA_TOOLS` e URL isolada em `SALDO_UI_URL`.
 
-Nesse modo, no `backend/.env` configure a `DATABASE_URL` para
-`localhost:55433`, e inicie `npm run dev` no backend (porta 3000)
-e no frontend (porta 5174). O arquivo opcional
-`docker-compose.dev-db.yml` não é usado quando se inicia tudo pelo Docker.
-Não execute frontend/backend manuais junto com os containers completos.
+## Mais de um computador
 
-## Validação automática
-
-O workflow `.github/workflows/ci.yml` inclui o job `docker-smoke`
-que constrói as imagens, aguarda os três health checks e verifica
-HTTP no frontend, API direta e API pelo proxy. Ele usa um `.env`
-descartável gerado no runner e não acessa o banco local.
-
-## Dois computadores e Git
-
-Cada computador tem seu próprio `backend/.env` (não versionado), suas
-próprias imagens e volume do banco. Um `git pull origin develop` atualiza
-o **código**, mas não copia contas, pagamentos, usuários nem senhas.
-Mantenha a mesma chave JWT apenas enquanto precisar preservar sessões
-naquela máquina. Se uma chave foi enviada ao GitHub, substitua-a por
-uma nova e reinicie os containers; não versione a chave no `.env.example`.
-
-Antes da apresentação, faça o ensaio com o banco e a conta de demonstração
-do computador que será usado na faculdade.
+Cada computador tem seus próprios volumes e configuração. `git pull` atualiza
+o código, sem transferir usuários, contas, pagamentos ou chaves de sessão.
+Faça backup do PostgreSQL e preserve a configuração ao migrar dados entre máquinas.

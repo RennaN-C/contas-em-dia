@@ -9,6 +9,8 @@ import { PaymentsPage } from "./pages/PaymentsPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { RegisterPage } from "./pages/RegisterPage";
 import {SettingsPage} from './pages/SettingsPage';
+import {CalendarPage} from './pages/CalendarPage';
+import {ReportsPage} from './pages/ReportsPage';
 
 export function App() {
   return (
@@ -18,6 +20,8 @@ export function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/contas" element={<AccountsPage />} />
           <Route path="/pagamentos" element={<PaymentsPage />} />
+          <Route path="/calendario" element={<CalendarPage />} />
+          <Route path="/relatorios" element={<ReportsPage />} />
           <Route path="/avisos" element={<NotificationsPage />} />
           <Route path="/perfil" element={<ProfilePage />} />
           <Route path="/configuracoes" element={<SettingsPage/>}/>

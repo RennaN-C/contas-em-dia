@@ -18,6 +18,17 @@ enum TipoConta {
   RECORRENTE
 }
 
+enum CategoriaConta {
+  MORADIA
+  ESTUDOS
+  TRANSPORTE
+  SAUDE
+  ASSINATURAS
+  ALIMENTACAO
+  LAZER
+  OUTRAS
+}
+
 model Usuario {
   id           String     @id @default(uuid())
   nome         String
@@ -26,6 +37,7 @@ model Usuario {
   contas       Conta[]
   mensagens    Mensagem[]
   preferencias PreferenciaUsuario?
+  historico HistoricoConta[]
   criadoEm     DateTime   @default(now()) @map("criado_em")
   atualizadoEm DateTime   @updatedAt @map("atualizado_em")
 
@@ -37,6 +49,7 @@ model Conta {
   usuarioId    String      @map("usuario_id")
   usuario      Usuario     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   descricao    String
+  categoria CategoriaConta @default(OUTRAS)
   valor        Decimal     @db.Decimal(12, 2)
   vencimento   DateTime
   tipo         TipoConta   @default(AVULSA)
@@ -50,6 +63,7 @@ model Conta {
   pagamentos   Pagamento[]
   avisos       Aviso[]
   mensagens    Mensagem[]
+  historico HistoricoConta[]
   criadoEm     DateTime    @default(now()) @map("criado_em")
   atualizadoEm DateTime    @updatedAt @map("atualizado_em")
 
@@ -124,5 +138,25 @@ model PreferenciaUsuario {
   ordenacaoContas String @default("vencimento") @map("ordenacao_contas")
   confirmarPagamento Boolean @default(true) @map("confirmar_pagamento")
   reduzirMovimento Boolean @default(false) @map("reduzir_movimento")
+  tipoContaPadrao TipoConta @default(AVULSA) @map("tipo_conta_padrao")
+  categoriaPadrao CategoriaConta @default(OUTRAS) @map("categoria_padrao")
+  inicioSemana Int @default(0) @map("inicio_semana")
+  detalhesRelatorio Boolean @default(true) @map("detalhes_relatorio")
   @@map("preferencias_usuarios")
+}
+
+model HistoricoConta {
+  id String @id @default(uuid())
+  chave String? @unique
+  usuarioId String @map("usuario_id")
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  contaId String? @map("conta_id")
+  conta Conta? @relation(fields: [contaId], references: [id], onDelete: SetNull)
+  descricao String
+  acao String
+  detalhes Json
+  criadoEm DateTime @default(now()) @map("criado_em")
+  @@index([usuarioId, criadoEm])
+  @@index([contaId, criadoEm])
+  @@map("historico_contas")
 }

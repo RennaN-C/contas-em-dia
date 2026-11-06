@@ -5,6 +5,8 @@ export function Modal({title,children,onClose,busy=false,role='dialog'}:{title:s
   useEffect(()=>{
     const dialog=ref.current!,previous=document.activeElement as HTMLElement|null,overflow=document.body.style.overflow;
     if(typeof dialog.showModal==='function')dialog.showModal();else dialog.setAttribute('open','');
+    const initialField=dialog.querySelector<HTMLElement>('input:not([type=hidden]):not(:disabled),select:not(:disabled),textarea:not(:disabled)');
+    initialField?.focus();
     document.body.style.overflow='hidden';
     return()=>{if(typeof dialog.close==='function')dialog.close();document.body.style.overflow=overflow;if(previous?.isConnected)previous.focus();};
   },[]);
