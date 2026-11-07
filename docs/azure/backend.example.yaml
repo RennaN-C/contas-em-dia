@@ -1,0 +1,31 @@
+# TEMPLATE PARA REVISÃO FUTURA — NÃO APLICADO.
+# Completar ambiente, identidade gerenciada, registry e secret refs Key Vault.
+name: saldoplus-api
+type: Microsoft.App/containerApps
+properties:
+  managedEnvironmentId: SUBSTITUIR_PELO_RESOURCE_ID
+  configuration:
+    activeRevisionsMode: Single
+    ingress:
+      external: false
+      targetPort: 3000
+      transport: http
+  template:
+    containers:
+      - name: api
+        image: REGISTRY/saldoplus-api:COMMIT_SHA
+        resources:
+          cpu: 0.5
+          memory: 1Gi
+        env:
+          - name: NODE_ENV
+            value: production
+          - name: DATABASE_URL
+            secretRef: database-url
+          - name: JWT_SECRET
+            secretRef: jwt-secret
+          - name: DISCORD_ENABLED
+            value: "false"
+    scale:
+      minReplicas: 1
+      maxReplicas: 1

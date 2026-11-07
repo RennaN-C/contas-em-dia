@@ -14,13 +14,21 @@
     "test": "vitest run --passWithNoTests",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "lint": "eslint .",
+    "discord:check": "tsx src/integrations/discord/manage.ts check",
+    "discord:commands": "tsx src/integrations/discord/manage.ts register",
+    "test:migrations": "node tests/migrations.mjs",
+    "discord:endpoint": "tsx src/integrations/discord/manage.ts endpoint",
+    "discord:local": "tsx src/integrations/discord/local.ts"
   },
   "overrides": {
-    "deepmerge-ts": "^8.0.2"
+    "deepmerge-ts": "^8.0.2",
+    "minimatch": "^11.0.1"
   },
   "dependencies": {
     "@prisma/client": "^6.16.1",
+    "@prometheus-io/client": "^0.16.1",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
@@ -32,15 +40,18 @@
     "zod": "^4.1.8"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.3.1",
     "@types/supertest": "^6.0.3",
+    "eslint": "^10.14.0",
     "prisma": "^6.16.1",
     "supertest": "^7.1.4",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
+    "typescript-eslint": "^8.72.1",
     "vitest": "^4.1.12"
   }
 }

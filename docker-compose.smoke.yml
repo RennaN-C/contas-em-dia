@@ -1,0 +1,11 @@
+# Override isolado: não reutiliza portas nem credenciais da instalação pessoal.
+services:
+  backend:
+    env_file: !override []
+    environment:
+      DISCORD_ENABLED: "false"
+    ports: !override
+      - "127.0.0.1:3300:3000"
+  frontend:
+    ports: !override
+      - "127.0.0.1:5574:80"

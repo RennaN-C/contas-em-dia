@@ -1,2 +1,2 @@
 import { defineConfig } from 'vitest/config';
-export default defineConfig({ test: { include: ['tests/**/*.test.ts'], exclude: ['dist/**', 'node_modules/**'] } });
+export default defineConfig({ test: { include: ['tests/**/*.test.ts'], exclude: ['dist/**', 'node_modules/**'], setupFiles: ['tests/setup-env.ts'], fileParallelism: process.env.RUN_DATABASE_TESTS !== '1' } });

@@ -33,6 +33,7 @@ beforeEach(() => {
   db.aviso.findUniqueOrThrow.mockResolvedValue({ id: 'aviso', enviadoEm: null });
   db.usuario.findMany.mockResolvedValue([{ id: 'owner' }]);
   db.mensagem.updateMany.mockResolvedValue({ count: 1 });
+  db.mensagem.createMany.mockResolvedValue({ count: 1 });
   db.mensagem.findFirstOrThrow.mockResolvedValue({ id, usuarioId: 'owner', lida: true });
 });
 afterEach(() => vi.restoreAllMocks());
@@ -120,11 +121,11 @@ describe('mensagens e autorização HTTP', () => {
   it('lista só usuário do token', async () => {
     db.mensagem.findMany.mockResolvedValue([]);
     expect((await request(app).get('/api/messages?usuarioId=other').set(auth)).body.messages).toEqual([]);
-    expect(db.mensagem.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { usuarioId: 'owner' } }));
+    expect(db.mensagem.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { usuarioId: 'owner', plataforma: 'INTERNA' } }));
   });
   it('marca como lida com escopo obrigatório do token', async () => {
     expect((await request(app).patch(`/api/messages/${id}/read`).set(auth).send({ usuarioId: 'other' })).body.message.lida).toBe(true);
-    expect(db.mensagem.updateMany).toHaveBeenCalledWith({ where: { id, usuarioId: 'owner' }, data: { lida: true } });
+    expect(db.mensagem.updateMany).toHaveBeenCalledWith({ where: { id, usuarioId: 'owner', plataforma: 'INTERNA' }, data: { lida: true } });
   });
   it('mensagem alheia é 404 e não retorna dados', async () => {
     db.mensagem.updateMany.mockResolvedValue({ count: 0 });
@@ -141,8 +142,8 @@ describe('mensagens e autorização HTTP', () => {
   });
   it('serviço exige proprietário na consulta e na atualização', async () => {
     await listMessages('other'); await markRead('other', id);
-    expect(db.mensagem.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { usuarioId: 'other' } }));
-    expect(db.mensagem.updateMany).toHaveBeenCalledWith({ where: { id, usuarioId: 'other' }, data: { lida: true } });
+    expect(db.mensagem.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { usuarioId: 'other', plataforma: 'INTERNA' } }));
+    expect(db.mensagem.updateMany).toHaveBeenCalledWith({ where: { id, usuarioId: 'other', plataforma: 'INTERNA' }, data: { lida: true } });
   });
 });
 describe('juros demonstrativos', () => {

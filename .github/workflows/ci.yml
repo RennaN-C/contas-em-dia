@@ -41,7 +41,14 @@ jobs:
       - run: npm ci
       - run: npx prisma generate
       - run: npx prisma migrate deploy
+      - run: npm run lint
       - run: npm run build
+      - name: Validar atualização de banco populado e constraints
+        env:
+          MIGRATION_DATABASE_URL: postgresql://teste:teste_ci@localhost:5432/saldo_migration_test
+        run: |
+          psql "$DATABASE_URL" -c 'CREATE DATABASE saldo_migration_test'
+          npm run test:migrations
       - run: npm test
       - run: npm audit --audit-level=high
   frontend:
@@ -58,6 +65,7 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
+      - run: npm run lint
       - run: npm run build
       - run: npm test
       - run: npm audit --audit-level=high

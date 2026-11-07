@@ -5,7 +5,7 @@ export async function personalSummary(usuarioId: string) {
   const [accounts, payments, unread] = await Promise.all([
     prisma.conta.findMany({ where: { usuarioId }, include: { pagamentos: true } }),
     prisma.pagamento.findMany({ where: { conta: { usuarioId } } }),
-    prisma.mensagem.count({ where: { usuarioId, lida: false } })
+    prisma.mensagem.count({ where: { usuarioId, lida: false, plataforma: 'INTERNA' } })
   ]);
   const balance = accounts.reduce((sum, row) => sum + cents(row.valor) - row.pagamentos.reduce((paid, p) => paid + cents(p.valor), 0), 0);
   return { contas: accounts.length, quitadas: accounts.filter(row => accountStatus(row.valor, row.vencimento, row.pagamentos) === 'PAGA').length,

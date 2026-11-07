@@ -1,0 +1,82 @@
+# Relatório do Projeto Integrador — Saldo+
+
+Tema 17 — ContasEmDia/Saldo+, finanças pessoais. Referência lida: `Temas-Projeto-Integrador-APIs (2).docx`, incluindo requisitos comuns e Anexos A/B. Decisão final: **novo bot exclusivo SaldoPlusBot**, sem alterar o bot da aula. O usuário criou a nova aplicação; autenticação, registro de comandos, webhook HTTPS, vínculo, DM e botão foram validados no ambiente local. Azure será usado em etapa futura. Não houve deploy, provisionamento pago, merge ou release.
+
+## Base preservada
+
+Branch `feat/integrador-discord`, criada de `0a5bb22` na antiga branch local `marlon`. `origin/main` (`787c6eb`, estável 1.0.1) é ancestral desse commit; os três commits adicionais, inclusive integração com develop, foram preservados. `origin/develop` estava em `b9d5e2f`, anterior às funcionalidades da main. Base da PR: **main**, para revisar sobre a versão estável completa. Auditoria original em [integrador-baseline.md](../integrador-baseline.md).
+
+Já existiam autenticação JWT, perfil/preferências, contas avulsas/recorrentes, pagamentos parciais/integrais idempotentes, categorias, histórico, relatórios/calendário, avisos D−3/D−1/D, resumo semanal, mensagens internas, juros BrasilAPI com fallback BCB, Compose e CI. Nenhuma dessas funcionalidades foi removida.
+
+Baseline inicial: backend 209 aprovados / 54 integrações ignoradas, frontend 124 aprovados. O Prisma Client local estava desatualizado; após generate, a execução PostgreSQL revelou timeout concorrente retornando 500. A espera para obter transação foi ampliada; expiração/conflito agora retorna 409 para repetição com a mesma chave, sem alterar cálculo financeiro.
+
+## Implementação e arquivos
+
+| Área | Implementação / arquivos principais |
+|---|---|
+| Schema | `backend/prisma/schema.prisma`, três migrations Discord descritas no guia de modelagem |
+| REST/ambiente | `backend/src/app.ts`, `config/env.ts`, `routes/index.ts`, `.env.example` |
+| Cliente e segurança | `backend/src/integrations/discord/{client,config,crypto,interactions,commands,manage,setup,local}.ts` |
+| Serviços | `backend/src/modules/messages/discord-*.ts`, `messages.service.ts`; aproveita os jobs/regras existentes |
+| Worker | `backend/src/jobs/discord.ts`, `schedules.ts`; inbox/outbox PostgreSQL, DM, respostas privadas e confirmação |
+| Frontend | `frontend/src/features/messages/DiscordConnection.tsx`, `pages/ProfilePage.tsx` |
+| Métricas | `backend/src/lib/metrics.ts`, perfil `monitoring` no Compose, `docs/monitoring/` |
+| Qualidade | ESLint de ambos projetos, package/lockfiles, `backend/tests/discord.*`, `metrics.test.ts`, `migrations.mjs`, `frontend/tests/discord.test.tsx`, CI |
+| Ajustes de compatibilidade | Filtro de mensagens internas, contagem do perfil, mocks Prisma coerentes, timeout concorrente; escape redundante do CSV removido sem mudar a proteção |
+| Preparação | `docs/azure/`, README, documentação Discord e override Compose para smoke isolado |
+
+`git diff --name-only 0a5bb22...HEAD` fornece a lista exata versionada. O DOCX entregue pelo usuário permanece como arquivo de referência local; não é gerado nem alterado pela implementação.
+
+## Testes e evidências disponíveis
+
+| Validação | Resultado local |
+|---|---|
+| Backend completo com PostgreSQL real | **315 aprovados**, 33 arquivos, nenhuma integração ignorada na execução com RUN_DATABASE_TESTS=1 |
+| Frontend completo | **129 aprovados**, 19 arquivos |
+| Lint e builds TypeScript/Vite | Aprovados em ambos projetos |
+| npm audit | Zero vulnerabilidades nos dois lockfiles |
+| Banco vazio/populado | `test:migrations`: sete migrations anteriores → fixtures antigas → três migrations Discord; conteúdo preservado, proprietário interno obrigatório e estados inválidos rejeitados |
+| Compose smoke isolado | Cadastro, login, conta e pagamento idempotente via Nginx → API → PostgreSQL aprovados; sessão/chave/valores/histórico preservados após restart e recriação |
+| Monitoramento local | Perfil iniciado no projeto isolado; Prometheus alvo UP / consulta up=1, Grafana 12.3.0 database=ok e dashboard Saldo+ provisionado com sete painéis |
+| Chrome desktop/mobile | Perfil autenticado com conta sintética, estado Discord desabilitado e layout sem overflow; capturas abaixo |
+| CI GitHub | [Execução #17 aprovada](https://github.com/RennaN-C/contas-em-dia/actions/runs/42317439217), com backend, frontend e Docker smoke; revisões posteriores são conferidas na aba Checks da [PR #47](https://github.com/RennaN-C/contas-em-dia/pull/47) |
+| Discord real | Nova aplicação autenticada; bot instalado; quatro comandos registrados; endpoint HTTPS aceito; vínculo, DM autorizada, botão, resumo semanal e aviso D−3 da conta criada para apresentação validados |
+
+Discord automatizado usa chaves Ed25519 geradas durante testes e respostas externas simuladas. Cobre assinatura/bytes/replay, PING, identidade, opt-in/código expirado/reutilizado, privacidade A/B, comandos/botões, interação duplicada, mensagens antes do vínculo, falhas 401/403/429/500, backoff, concorrência e recuperação/resultado incerto. Também cobre registro seguro de endpoint e envio de aviso atual após vínculo posterior, com pagamento parcial atualizado e histórico antigo excluído. A validação real é separada dos mocks e está registrada em [operação local](operacao-local.md), sem publicar credenciais ou dados pessoais.
+
+Os testes PostgreSQL compartilham banco com jobs que varrem todos os usuários; por isso arquivos de integração executam em sequência para impedir interferência entre fixtures. Mocks unitários foram ajustados ao retorno real `{count}` e à filtragem de plataforma. `tests/setup-env.ts` desliga Discord real do desenvolvedor antes das importações; cada teste habilita somente a configuração simulada necessária.
+
+## Matriz de conformidade acadêmica
+
+| Exigência | Situação e evidência |
+|---|---|
+| Tema 17: contas, pagamentos, avisos e resumo | Existente e preservado; suíte financeira completa |
+| API REST própria/stack fixa | Mantida: React/TS/Vite, Node/Express/TS, PostgreSQL/Prisma, Zod, node-cron |
+| Segunda API BrasilAPI | Existente, com fallback BCB e testes mantidos |
+| A.2.1 ciclo das mensagens | Schema/status, worker e testes; enviada não significa lida; botão marca respondida |
+| A.2.2 opt-in / canais_usuario | Perfil + código seguro/expiração/hash/uso único/revogação; isolamento testado |
+| A.4.1 aplicação e autenticação | SaldoPlusBot criado pelo usuário e validado na API; ID/Public Key conferem, servidor acessível |
+| A.4.2 DM / botão | DM real autorizada enviada com ID externo; botão real persistiu respondida/data de resposta |
+| A.4.3 Ed25519/HTTP/ACK | Raw body, 401, PONG, deferred ephemeral e fila; Discord aceitou o endpoint HTTPS e interações reais foram concluídas |
+| A.4.4 comandos | Quatro comandos registrados no servidor; scripts reproduzíveis de registro e configuração local |
+| A.4.5 Gateway | Dispensado no escopo do Tema 17; sem alegação de recebimento de texto livre |
+| A.4.6 limites/falhas | Timeout, retry_after, pausas persistentes, backoff, falhas auditadas e proteção de DM |
+| A.5 migrations / persistência | Três migrations aditivas; nomes acadêmicos mapeados, UUIDs e histórico preservados; teste vazio/populado |
+| A.6 túnel | Quick Tunnel ativo no perfil Docker discord; comando discord:local registra a URL novamente após recriação |
+| A.7 segurança | Assinaturas, JWT/isolamento, códigos hash, tokens cifrados/fora do Git, auditoria sanitizada; testes automáticos |
+| CI lint/testes a partir do encontro 11 | Workflow ampliado; resultado remoto separado das evidências locais |
+| Compose e segundo bimestre | Compose padrão preservado; Prometheus/Grafana opcionais e dashboard provisionado |
+| Tags aula-01…aula-18 | Ausentes no histórico consultado; nenhuma tag inventada. Grupo precisa mapear aulas a commits comprovados |
+| Release final v1.0.0 | Releases existentes `1.0.0` e `1.0.1` preservadas; divergência do prefixo `v` registrada, sem sobrescrever |
+| B.1–B.9 nuvem / banco gerenciado / DNS / TLS / custo | Preparação Azure documentada, **publicação e evidências pendentes** por proibição explícita de deploy nesta tarefa |
+| A.1 aceite da plataforma | Discord é decisão da equipe; confirmar com professor o aceite se o encontro 06 já passou |
+
+## Reprodução e pendências reais
+
+Passos exatos para criar/convidar o novo bot, configurar `.env`, verificar identidade, registrar comandos, validar PING local por HTTPS, vincular e demonstrar DM/botão: [guia Discord](README.md). Modelagem/rollback: [modelagem](modelagem.md). Métricas: [monitoramento](../monitoring/README.md). Publicação/cotação futura: [Azure](../azure/README.md).
+
+Pendências externas: aprovação acadêmica da escolha de plataforma, mapeamento de tags por aula e conta/região/custos/domínio/DNS/TLS/banco gerenciado/deploy Azure. A conexão Discord local foi validada com a participação do usuário. Testes automatizados continuam sem credenciais reais; somente a configuração e a demonstração manual autorizadas usaram o `.env` local, fora do Git. O túnel temporário não substitui a publicação final.
+
+PR aberta para revisão: [#47 — integração Discord](https://github.com/RennaN-C/contas-em-dia/pull/47), com base main. [Histórico de execuções da CI nesta branch](https://github.com/RennaN-C/contas-em-dia/actions?query=branch%3Afeat%2Fintegrador-discord). O resultado remoto depende da execução do commit corrente; não confundir com a execução local. As issues #39–#46 foram atualizadas para Discord/Azure e continuam abertas para revisão das evidências e pendências. Sem merge automático.
+
+Capturas do Chrome com conta sintética e API real do Compose isolado: [desktop](../qa/discord-profile-desktop.png) e [mobile](../qa/discord-profile-mobile.png). O script reproduzível `backend/tests/discord-profile-smoke.mjs` usa Chrome/CDP em localhost:9339 e `SALDO_SMOKE_URL=http://127.0.0.1:5574`; não exige biblioteca de navegador no projeto. Essas imagens comprovam a interface sem credenciais, não DM/convite real. Os testes de interface cobrem os estados pendente, conectado, desconectado e falhas com backend simulado.

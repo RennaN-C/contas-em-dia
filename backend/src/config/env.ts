@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { z } from "zod";
+import { discordConfig } from '../integrations/discord/config.js';
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -14,3 +15,4 @@ const envSchema = z.object({
 });
 
 export const env = envSchema.parse(process.env);
+discordConfig();

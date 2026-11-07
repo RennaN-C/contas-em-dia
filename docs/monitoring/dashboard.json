@@ -1,0 +1,160 @@
+{
+    "refresh":  "15s",
+    "version":  1,
+    "panels":  [
+                   {
+                       "id":  1,
+                       "gridPos":  {
+                                       "y":  0,
+                                       "w":  12,
+                                       "h":  8,
+                                       "x":  0
+                                   },
+                       "targets":  [
+                                       {
+                                           "refId":  "A",
+                                           "expr":  "sum(rate(saldo_http_requests_total[5m]))"
+                                       }
+                                   ],
+                       "datasource":  {
+                                          "type":  "prometheus",
+                                          "uid":  "saldo-prometheus"
+                                      },
+                       "type":  "timeseries",
+                       "title":  "Requisições HTTP"
+                   },
+                   {
+                       "id":  2,
+                       "gridPos":  {
+                                       "y":  0,
+                                       "w":  12,
+                                       "h":  8,
+                                       "x":  12
+                                   },
+                       "targets":  [
+                                       {
+                                           "refId":  "A",
+                                           "expr":  "histogram_quantile(0.95, sum by (le) (rate(saldo_http_duration_seconds_bucket[5m])))"
+                                       }
+                                   ],
+                       "datasource":  {
+                                          "type":  "prometheus",
+                                          "uid":  "saldo-prometheus"
+                                      },
+                       "type":  "timeseries",
+                       "title":  "Latência p95"
+                   },
+                   {
+                       "id":  3,
+                       "gridPos":  {
+                                       "y":  8,
+                                       "w":  12,
+                                       "h":  8,
+                                       "x":  0
+                                   },
+                       "targets":  [
+                                       {
+                                           "refId":  "A",
+                                           "expr":  "sum(rate(saldo_http_requests_total{status=~\"5..\"}[5m]))"
+                                       }
+                                   ],
+                       "datasource":  {
+                                          "type":  "prometheus",
+                                          "uid":  "saldo-prometheus"
+                                      },
+                       "type":  "timeseries",
+                       "title":  "Erros HTTP"
+                   },
+                   {
+                       "id":  4,
+                       "gridPos":  {
+                                       "y":  8,
+                                       "w":  12,
+                                       "h":  8,
+                                       "x":  12
+                                   },
+                       "targets":  [
+                                       {
+                                           "refId":  "A",
+                                           "expr":  "saldo_discord_messages"
+                                       }
+                                   ],
+                       "datasource":  {
+                                          "type":  "prometheus",
+                                          "uid":  "saldo-prometheus"
+                                      },
+                       "type":  "timeseries",
+                       "title":  "Mensagens Discord por estado"
+                   },
+                   {
+                       "id":  5,
+                       "gridPos":  {
+                                       "y":  16,
+                                       "w":  12,
+                                       "h":  8,
+                                       "x":  0
+                                   },
+                       "targets":  [
+                                       {
+                                           "refId":  "A",
+                                           "expr":  "saldo_discord_attempts"
+                                       }
+                                   ],
+                       "datasource":  {
+                                          "type":  "prometheus",
+                                          "uid":  "saldo-prometheus"
+                                      },
+                       "type":  "timeseries",
+                       "title":  "Tentativas Discord"
+                   },
+                   {
+                       "id":  6,
+                       "gridPos":  {
+                                       "y":  16,
+                                       "w":  12,
+                                       "h":  8,
+                                       "x":  12
+                                   },
+                       "targets":  [
+                                       {
+                                           "refId":  "A",
+                                           "expr":  "saldo_discord_interactions"
+                                       }
+                                   ],
+                       "datasource":  {
+                                          "type":  "prometheus",
+                                          "uid":  "saldo-prometheus"
+                                      },
+                       "type":  "timeseries",
+                       "title":  "Interações recebidas"
+                   },
+                   {
+                       "id":  7,
+                       "gridPos":  {
+                                       "y":  24,
+                                       "w":  12,
+                                       "h":  8,
+                                       "x":  0
+                                   },
+                       "targets":  [
+                                       {
+                                           "refId":  "A",
+                                           "expr":  "saldo_jobs_total"
+                                       }
+                                   ],
+                       "datasource":  {
+                                          "type":  "prometheus",
+                                          "uid":  "saldo-prometheus"
+                                      },
+                       "type":  "timeseries",
+                       "title":  "Execuções de jobs"
+                   }
+               ],
+    "uid":  "saldo-plus",
+    "time":  {
+                 "to":  "now",
+                 "from":  "now-1h"
+             },
+    "schemaVersion":  39,
+    "title":  "Saldo+ — API e Discord"
+}

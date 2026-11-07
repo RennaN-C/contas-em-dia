@@ -4,17 +4,24 @@ import { prisma } from '../../lib/prisma.js';
 import { AccountError, cents } from '../accounts/accounts.service.js';
 import { addDays, utcDay, weekStart, businessDay } from '../notifications/dates.js';
 import { transaction } from '../../jobs/transaction.js';
+import { enqueueDiscord } from './discord-outbox.service.js';
 
-type MessageInput = { usuarioId: string; contaId?: string; chave: string; tipo: string; titulo: string; conteudo: string };
-export async function persistMessage(tx: Prisma.TransactionClient, input: MessageInput) {
-  return tx.mensagem.createMany({ data: { id: randomUUID(), ...input }, skipDuplicates: true });
+type MessageInput = { usuarioId: string; contaId?: string; chave: string; tipo: string; titulo: string; conteudo: string; discordConteudo?: string };
+export async function persistMessage(tx: Prisma.TransactionClient, input: MessageInput, discordDelivery: 'new' | 'current' | 'internal' = 'new') {
+  const { discordConteudo, ...stored } = input;
+  const result = await tx.mensagem.createMany({ data: { id: randomUUID(), ...stored }, skipDuplicates: true });
+  // Same transaction as the internal notification: no Discord network call here.
+  // A user can opt in after the current event was already generated internally.
+  // Historical recovery stays internal; the unique outbox key still prevents repeats.
+  if (discordDelivery !== 'internal' && (result.count || discordDelivery === 'current')) await enqueueDiscord(tx, { ...stored, discordConteudo });
+  return result;
 }
 const accountReference = { conta: { select: { id: true, descricao: true, vencimento: true } } };
 export function listMessages(usuarioId: string) {
-  return prisma.mensagem.findMany({ where: { usuarioId }, include: accountReference, orderBy: [{ criadoEm: 'desc' }, { id: 'asc' }] });
+  return prisma.mensagem.findMany({ where: { usuarioId, plataforma: 'INTERNA' }, include: accountReference, orderBy: [{ criadoEm: 'desc' }, { id: 'asc' }] });
 }
 export async function markRead(usuarioId: string, id: string) {
-  const result = await prisma.mensagem.updateMany({ where: { id, usuarioId }, data: { lida: true } });
+  const result = await prisma.mensagem.updateMany({ where: { id, usuarioId, plataforma: 'INTERNA' }, data: { lida: true } });
   if (!result.count) throw new AccountError('Mensagem não encontrada', 404);
   return prisma.mensagem.findFirstOrThrow({ where: { id, usuarioId }, include: accountReference });
 }
@@ -38,7 +45,7 @@ export async function processWeeklySummaries(now = businessDay(), usuarioId?: st
         const summary = await weeklySummary(user.id, now, tx);
         const money = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         const detail = summary.accounts.map(c => `${c.descricao}: ${money(c.saldo)}, vencimento ${c.vencimento.toISOString().slice(0, 10)}`).join('\n');
-        await persistMessage(tx, { usuarioId: user.id, chave: `semana:${user.id}:${weekStart(now).toISOString().slice(0, 10)}`, tipo: 'RESUMO_SEMANAL', titulo: 'Resumo semanal', conteudo: `Próximos 7 dias (${summary.inicio.toISOString().slice(0, 10)} a ${addDays(summary.inicio, 6).toISOString().slice(0, 10)}): ${summary.accounts.length} conta(s). Saldo total: ${money(summary.total)}.\n${detail || 'Nenhuma conta a vencer.'}` });
+        await persistMessage(tx, { usuarioId: user.id, chave: `semana:${user.id}:${weekStart(now).toISOString().slice(0, 10)}`, tipo: 'RESUMO_SEMANAL', titulo: 'Resumo semanal', conteudo: `Próximos 7 dias (${summary.inicio.toISOString().slice(0, 10)} a ${addDays(summary.inicio, 6).toISOString().slice(0, 10)}): ${summary.accounts.length} conta(s). Total restante a pagar: ${money(summary.total)}.\n${detail || 'Nenhuma conta a vencer.'}` }, weekStart(now).getTime() === weekStart(businessDay()).getTime() ? 'current' : 'internal');
       });
     } catch (error) { failures.push(error); }
   }
@@ -46,9 +53,9 @@ export async function processWeeklySummaries(now = businessDay(), usuarioId?: st
 }
 
 export function messageSummary(usuarioId: string) {
-  return prisma.mensagem.count({ where: { usuarioId, lida: false } }).then(unread => ({ unread }));
+  return prisma.mensagem.count({ where: { usuarioId, lida: false, plataforma: 'INTERNA' } }).then(unread => ({ unread }));
 }
 export async function markAllRead(usuarioId: string) {
-  const result = await prisma.mensagem.updateMany({ where: { usuarioId, lida: false }, data: { lida: true } });
+  const result = await prisma.mensagem.updateMany({ where: { usuarioId, lida: false, plataforma: 'INTERNA' }, data: { lida: true } });
   return { updated: result.count };
 }

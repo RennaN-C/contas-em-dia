@@ -6,6 +6,7 @@ import { Router } from "express";
 import { authRoutes } from "../modules/auth/auth.routes.js";
 import { usersRoutes } from "../modules/users/users.routes.js";
 import { prisma } from '../lib/prisma.js';
+import { discordRoutes } from '../modules/messages/discord.routes.js';
 
 export const routes = Router();
 
@@ -32,3 +33,4 @@ routes.use("/accounts", accountsRoutes);
 routes.use("/payments", paymentsRoutes);
 routes.use('/notifications', notificationsRoutes);
 routes.use('/messages', messagesRoutes);
+routes.use('/integrations/discord', discordRoutes);

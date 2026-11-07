@@ -28,6 +28,8 @@ services:
       DATABASE_URL: "postgresql://contasedia:contasedia_local@db:5432/contasedia?schema=public"
       CORS_ORIGINS: "http://localhost:5174,http://127.0.0.1:5174"
       TRUST_PROXY_HOPS: "1"
+      METRICS_ENABLED: "${METRICS_ENABLED:-false}"
+      METRICS_TOKEN: "${METRICS_TOKEN:-saldo-monitoramento-local}"
     init: true
     stop_grace_period: 30s
     volumes:
@@ -63,6 +65,48 @@ services:
       start_period: 15s
       retries: 6
 
+  discord-tunnel:
+    image: cloudflare/cloudflared:latest
+    profiles: [discord]
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    command: tunnel --no-autoupdate --protocol http2 --url http://backend:3000
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  prometheus:
+    image: prom/prometheus:v3.8.0
+    profiles: [monitoring]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./docs/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  grafana:
+    image: grafana/grafana:12.3.0
+    profiles: [monitoring]
+    restart: unless-stopped
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "127.0.0.1:3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docs/monitoring/provisioning:/etc/grafana/provisioning:ro
+      - ./docs/monitoring/dashboard.json:/var/lib/grafana/dashboards/saldo.json:ro
+
 volumes:
   postgres_data:
   runtime_config:
+  prometheus_data:
+  grafana_data:
