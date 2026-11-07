@@ -1,0 +1,10 @@
+global:
+  scrape_interval: 15s
+scrape_configs:
+  - job_name: saldo-api
+    metrics_path: /internal/metrics
+    authorization:
+      type: Bearer
+      credentials: saldo-monitoramento-local
+    static_configs:
+      - targets: ['backend:3000']
