@@ -553,4 +553,4 @@ caption { text-align: left; padding-block: .5rem; }
 }
 @media (max-width: 1000px) { .account-toolbar.account-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } .results-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) { .account-toolbar.account-filters > label:first-child { grid-column: auto; } .results-toolbar > div { width: 100%; } .results-toolbar button { flex: 1; justify-content: center; } .results-summary { gap: .6rem; } .results-summary > div { padding: .9rem; } .results-summary dd { font-size: 1.1rem; } }
-.discord-code { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
+.discord-code { white-space: pre-wrap; overflow-wrap: anywhere; }

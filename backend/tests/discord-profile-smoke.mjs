@@ -32,7 +32,10 @@ async function cdp(method, params = {}) {
 }
 const evaluate = async expression => (await cdp('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true })).result?.value;
 async function wait(expression) {
-  for (let i = 0; i < 150; i++) { if (await evaluate(expression)) return; await delay(100); }
+  for (let i = 0; i < 150; i++) {
+    if (await evaluate(expression)) { return; }
+    await delay(100);
+  }
   throw new Error('Condição do navegador não satisfeita');
 }
 try {
