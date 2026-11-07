@@ -36,6 +36,7 @@ model Usuario {
   senhaHash    String     @map("senha_hash")
   contas       Conta[]
   mensagens    Mensagem[]
+  canais CanalUsuario[]
   preferencias PreferenciaUsuario?
   historico HistoricoConta[]
   criadoEm     DateTime   @default(now()) @map("criado_em")
@@ -112,9 +113,64 @@ model Mensagem {
   contaId   String?  @map("conta_id")
   conta     Conta?   @relation(fields: [contaId], references: [id], onDelete: SetNull)
   criadoEm  DateTime @default(now()) @map("criado_em")
+  plataforma String @default("INTERNA")
+  direcao String @default("saida")
+  estado String @default("enviada") @map("status")
+  canalId String? @map("canal_usuario_id")
+  canal CanalUsuario? @relation(fields: [canalId], references: [id], onDelete: SetNull)
+  idExterno String? @unique @map("id_externo")
+  interacaoId String? @unique @map("interacao_id")
+  payloadBruto Json? @map("payload_bruto")
+  codigoErro String? @map("erro_codigo")
+  descricaoErro String? @map("erro_descricao")
+  enviadoEm DateTime? @map("enviado_em")
+  respondidoEm DateTime? @map("respondido_em")
+  tentativas Int @default(0)
+  proximaTentativa DateTime @default(now()) @map("proxima_tentativa")
+
+  @@index([plataforma, estado, proximaTentativa])
 
   @@index([usuarioId, criadoEm])
   @@map("mensagens")
+}
+
+model CanalUsuario {
+  id String @id @default(uuid())
+  usuarioId String @unique @map("usuario_id")
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  plataforma String @default("DISCORD")
+  discordId String? @unique @map("chat_id")
+  codigoConvite String? @unique @map("codigo_convite")
+  expiraEm DateTime? @map("expira_em")
+  ativo Boolean @default(false)
+  vinculadoEm DateTime? @map("vinculado_em")
+  erro String?
+  mensagens Mensagem[]
+  criadoEm DateTime @default(now()) @map("criado_em")
+  @@map("canais_usuario")
+}
+
+// Inbox durável também guarda eventos de pessoas ainda não vinculadas.
+// Token de continuação cifrado; payload sanitizado nunca contém token/código.
+model InteracaoDiscord {
+  id String @id
+  discordId String @map("discord_id")
+  payload Json
+  segredo String?
+  resposta Json?
+  processado Boolean @default(false)
+  concluido Boolean @default(false)
+  tentativas Int @default(0)
+  proximaTentativa DateTime @default(now()) @map("proxima_tentativa")
+  criadoEm DateTime @default(now()) @map("criado_em")
+  @@index([concluido, proximaTentativa])
+  @@map("interacoes_discord")
+}
+
+model ControleDiscord {
+  chave String @id
+  pausadoAte DateTime @map("pausado_ate")
+  @@map("controle_discord")
 }
 
 model TaxaReferencia {
