@@ -4,6 +4,8 @@ import { routes } from "./routes/index.js";
 import helmet from 'helmet';
 import { env } from './config/env.js';
 import { apiErrorHandler, apiRateLimit, authRateLimit, noStore } from './middlewares/security.js';
+import { discordRawBody, discordWebhook } from './integrations/discord/interactions.js';
+import { measureRequests, metricsEndpoint } from './lib/metrics.js';
 
 export const app = express();
 
@@ -13,6 +15,9 @@ app.use(helmet({ strictTransportSecurity: env.NODE_ENV === 'production' ? undefi
 const allowedOrigins = env.CORS_ORIGINS.split(',').map(value => value.trim());
 app.use(cors({ origin(origin, callback) { callback(origin && !allowedOrigins.includes(origin) ? new Error('Origem não permitida') : null, true); } }));
 app.use(noStore);
+app.use(measureRequests);
+app.get('/internal/metrics', metricsEndpoint);
+app.post('/api/webhook/discord', discordRawBody, discordWebhook);
 app.use(express.json({ limit: '16kb' }));
 app.use('/api', apiRateLimit());
 app.use('/api/auth', authRateLimit());

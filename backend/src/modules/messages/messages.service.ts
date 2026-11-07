@@ -4,17 +4,21 @@ import { prisma } from '../../lib/prisma.js';
 import { AccountError, cents } from '../accounts/accounts.service.js';
 import { addDays, utcDay, weekStart, businessDay } from '../notifications/dates.js';
 import { transaction } from '../../jobs/transaction.js';
+import { enqueueDiscord } from './discord-outbox.service.js';
 
 type MessageInput = { usuarioId: string; contaId?: string; chave: string; tipo: string; titulo: string; conteudo: string };
 export async function persistMessage(tx: Prisma.TransactionClient, input: MessageInput) {
-  return tx.mensagem.createMany({ data: { id: randomUUID(), ...input }, skipDuplicates: true });
+  const result = await tx.mensagem.createMany({ data: { id: randomUUID(), ...input }, skipDuplicates: true });
+  // Same transaction as the internal notification: no Discord network call here.
+  if (result.count) await enqueueDiscord(tx, input);
+  return result;
 }
 const accountReference = { conta: { select: { id: true, descricao: true, vencimento: true } } };
 export function listMessages(usuarioId: string) {
-  return prisma.mensagem.findMany({ where: { usuarioId }, include: accountReference, orderBy: [{ criadoEm: 'desc' }, { id: 'asc' }] });
+  return prisma.mensagem.findMany({ where: { usuarioId, plataforma: 'INTERNA' }, include: accountReference, orderBy: [{ criadoEm: 'desc' }, { id: 'asc' }] });
 }
 export async function markRead(usuarioId: string, id: string) {
-  const result = await prisma.mensagem.updateMany({ where: { id, usuarioId }, data: { lida: true } });
+  const result = await prisma.mensagem.updateMany({ where: { id, usuarioId, plataforma: 'INTERNA' }, data: { lida: true } });
   if (!result.count) throw new AccountError('Mensagem não encontrada', 404);
   return prisma.mensagem.findFirstOrThrow({ where: { id, usuarioId }, include: accountReference });
 }
@@ -46,9 +50,9 @@ export async function processWeeklySummaries(now = businessDay(), usuarioId?: st
 }
 
 export function messageSummary(usuarioId: string) {
-  return prisma.mensagem.count({ where: { usuarioId, lida: false } }).then(unread => ({ unread }));
+  return prisma.mensagem.count({ where: { usuarioId, lida: false, plataforma: 'INTERNA' } }).then(unread => ({ unread }));
 }
 export async function markAllRead(usuarioId: string) {
-  const result = await prisma.mensagem.updateMany({ where: { usuarioId, lida: false }, data: { lida: true } });
+  const result = await prisma.mensagem.updateMany({ where: { usuarioId, lida: false, plataforma: 'INTERNA' }, data: { lida: true } });
   return { updated: result.count };
 }

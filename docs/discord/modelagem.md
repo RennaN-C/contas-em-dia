@@ -1,6 +1,6 @@
 # Modelagem Discord
 
-As migrations `20261107010000_discord` e `20261107020000_nomes_academicos_discord` ampliam o schema sem remover tabelas ou registros. A segunda adequa nomes ao Anexo A.5: `chat_id`, `canal_usuario_id`, `status`, `erro_codigo`, `erro_descricao`. UUIDs e a coluna preexistente `criado_em` foram preservados em vez de converter para BIGINT ou renomear o histórico.
+As migrations `20261107010000_discord`, `20261107020000_nomes_academicos_discord` e `20261107030000_mensagens_sem_vinculo` ampliam o schema sem remover tabelas ou registros. A segunda adequa nomes ao Anexo A.5: `chat_id`, `canal_usuario_id`, `status`, `erro_codigo`, `erro_descricao`. A terceira permite proprietário nulo para interações externas sem vínculo, mantendo proprietário obrigatório para mensagens internas por CHECK. UUIDs e a coluna preexistente `criado_em` foram preservados em vez de converter para BIGINT ou renomear o histórico.
 
 `canais_usuario`: um vínculo por usuário Saldo+ e identidade Discord única. Convite de 128 bits aleatórios com hash SHA-256, validade de dez minutos, consumo sob lock e revogação explícita. O destino é o usuário Discord (`chat_id`), nunca um canal público.
 
