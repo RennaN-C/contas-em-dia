@@ -15,6 +15,16 @@ export async function runWeekly(now = businessDay()) {
   try { await processWeeklySummaries(now); jobRuns.inc({ job: 'weekly', result: 'ok' }); }
   catch (error) { jobRuns.inc({ job: 'weekly', result: 'error' }); console.error('Falha no job semanal de mensagens', error); }
 }
+export async function runNotificationScan(now = businessDay()) {
+  try {
+    await processNotifications(now);
+    await runDiscord();
+    jobRuns.inc({ job: 'notification-scan', result: 'ok' });
+  } catch {
+    jobRuns.inc({ job: 'notification-scan', result: 'error' });
+    console.error('Falha na verificação de vencimentos; será repetida na próxima execução');
+  }
+}
 async function runRecovery() {
   try { await recoverJobs(); jobRuns.inc({ job: 'recovery', result: 'ok' }); }
   catch { jobRuns.inc({ job: 'recovery', result: 'error' }); console.error('Falha na recuperação de jobs'); }
@@ -23,6 +33,7 @@ export function startSchedules() {
   if (process.env.NODE_ENV === 'test' || process.env.VITEST) return [];
   void runRecovery();
   return [
+    cron.schedule('*/10 * * * * *', () => runNotificationScan(), { timezone: 'America/Sao_Paulo', noOverlap: true }),
     cron.schedule('*/5 * * * * *', () => runDiscord(), { timezone: 'America/Sao_Paulo', noOverlap: true }),
     cron.schedule('0 6 * * *', () => runDaily(), { timezone: 'America/Sao_Paulo', noOverlap: true }),
     cron.schedule('5 6 * * 1', () => runWeekly(), { timezone: 'America/Sao_Paulo', noOverlap: true }),
