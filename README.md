@@ -4,6 +4,20 @@ Versão estável **1.0.1**. Consulte o [histórico de versões](CHANGELOG.md).
 
 Sistema de finanças pessoais para cadastro de contas recorrentes e avulsas, controle de vencimentos, pagamentos, avisos automáticos e estimativa de juros de atraso com integração à BrasilAPI.
 
+## Projeto Integrador — Discord
+
+Tema 17: integração preparada para um **novo SaldoPlusBot exclusivo**, sem reutilizar ou modificar o bot da aula. O financeiro continua funcionando com `DISCORD_ENABLED=false`. Não houve criação de aplicação Discord nem deploy nesta implementação.
+
+- [Criar/configurar o novo bot, registrar comandos, vínculo no Perfil e túnel HTTPS](docs/discord/README.md).
+- [Modelagem, migrations aditivas e preservação de dados](docs/discord/modelagem.md).
+- [Relatório acadêmico, testes e pendências de validação real](docs/discord/relatorio-integrador.md).
+- [Prometheus/Grafana opcionais](docs/monitoring/README.md).
+- [Preparação para Microsoft Azure, sem provisionamento](docs/azure/README.md).
+
+Comandos privados: `/vincular`, `/status`, `/proximas-contas`, `/desvincular`. Recebimento assinado: `POST /api/webhook/discord`. No backend, `npm run discord:check` valida a nova aplicação e `npm run discord:commands` registra os comandos no servidor de testes após configurar o `.env`. Tokens nunca passam ao frontend.
+
+Lint e testes: `npm ci`, `npm run lint`, `npm run build`, `npm test` em cada projeto. Backend requer `npx prisma generate`; integrações PostgreSQL usam `RUN_DATABASE_TESTS=1` com banco isolado/migrado. O teste adicional `npm run test:migrations` exige `MIGRATION_DATABASE_URL` apontando para banco vazio chamado `saldo_migration_test`. Não executar integrações contra dados pessoais.
+
 O **Saldo +** inclui painel com indicadores financeiros, gráficos dos últimos
 seis meses, distribuição de pagamentos e saldos, contas a acompanhar e central
 de avisos. Gráficos usam dados reais da API e oferecem tabela de valores;

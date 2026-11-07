@@ -1,0 +1,11 @@
+Recurso,Regiao,Unidade,QuantidadeMensal,PrecoUnitarioCotadoUSD,SubtotalUSD,Observacao
+Container Apps API,A_DEFINIR,hora ativa,730,A_COTAR,A_CALCULAR,minReplicas 1
+Container Apps frontend,A_DEFINIR,hora ou consumo,730,A_COTAR,A_CALCULAR,Conferir plano
+PostgreSQL Flexible Server,A_DEFINIR,hora,730,A_COTAR,A_CALCULAR,Compute + storage separados
+Storage banco e backups,A_DEFINIR,GiB mes,A_DEFINIR,A_COTAR,A_CALCULAR,Retencao aprovada
+Container Registry,A_DEFINIR,mes,1,A_COTAR,A_CALCULAR,Imagens e armazenamento
+Azure DNS,A_DEFINIR,zona e consultas,1,A_COTAR,A_CALCULAR,Dominio pago no registrador
+Key Vault,A_DEFINIR,operacoes,A_DEFINIR,A_COTAR,A_CALCULAR,Identidade gerenciada
+Log Analytics,A_DEFINIR,GiB ingestao,A_DEFINIR,A_COTAR,A_CALCULAR,Limitar retencao
+Rede e trafego,A_DEFINIR,GiB,A_DEFINIR,A_COTAR,A_CALCULAR,Saida Discord e APIs
+Alertas de orcamento,A_DEFINIR,limites USD,25/50/100,NA,NA,Configurar antes do provisionamento
