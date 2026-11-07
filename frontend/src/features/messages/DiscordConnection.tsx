@@ -39,7 +39,7 @@ export function DiscordConnection() {
     {feedback && <p role="status" className="feedback-success">{feedback}</p>}
     {invitation && connection?.pendente && <div>
       <p>No servidor Discord do projeto, use:</p>
-      <pre><code>/vincular codigo:{invitation.codigo}</code></pre>
+      <pre className="discord-code"><code>/vincular codigo:{invitation.codigo}</code></pre>
       <p>Expira às {new Date(invitation.expiraEm).toLocaleTimeString('pt-BR')}. Uso único. Não compartilhe este código.</p>
       <p>Depois de executar o comando, clique em Atualizar conexão.</p>
     </div>}

@@ -10,3 +10,7 @@
 - Documento `Temas-Projeto-Integrador-APIs.docx` não está no checkout. Os critérios do pedido e das issues serão a referência disponível; aceite integral do documento depende de acesso a ele.
 - Nenhum código do bot existente foi encontrado no checkout. Seu modo atual (Gateway/HTTP), application ID e comandos instalados dependem da equipe; nenhum bot será criado nem configuração externa alterada automaticamente.
 - Frontend tinha node_modules Vitest 3.2.7 apesar do lock declarar 4.1.12; executar npm ci antes da validação final.
+
+## Adendo após nova instrução da equipe
+
+A decisão inicial de reaproveitar o bot foi substituída explicitamente pelo usuário: **novo SaldoPlusBot exclusivo**, preservando o bot da aula. O documento acadêmico foi posteriormente entregue como `Temas-Projeto-Integrador-APIs (2).docx` (SHA-256 `4CDBF83D2DB9D988860FF6AA8CF5944B18937101F02672DEFA34242500717DD0`) e lido diretamente, inclusive Anexos A e B. A implementação e a matriz de conformidade seguem essa decisão final e o documento recebido. O arquivo de referência do usuário não foi modificado nem incluído automaticamente no Git.

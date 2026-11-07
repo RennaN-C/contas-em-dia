@@ -37,8 +37,9 @@ Baseline inicial: backend 209 aprovados / 54 integrações ignoradas, frontend 1
 | npm audit | Zero vulnerabilidades nos dois lockfiles |
 | Banco vazio/populado | `test:migrations`: sete migrations anteriores → fixtures antigas → três migrations Discord; conteúdo preservado, proprietário interno obrigatório e estados inválidos rejeitados |
 | Compose smoke isolado | Cadastro, login, conta e pagamento idempotente via Nginx → API → PostgreSQL aprovados; sessão/chave/valores/histórico preservados após restart e recriação |
-| Monitoramento local | Configuração opcional implementada; evidência de coleta será registrada após concluir a execução dos serviços |
-| CI GitHub | Resultado/link serão registrados após abertura da PR; execução local não substitui CI |
+| Monitoramento local | Perfil iniciado no projeto isolado; Prometheus alvo UP / consulta up=1, Grafana 12.3.0 database=ok e dashboard Saldo+ provisionado com sete painéis |
+| Chrome desktop/mobile | Perfil autenticado com conta sintética, estado Discord desabilitado e layout sem overflow; capturas abaixo |
+| CI GitHub | Pipeline disparado pela [PR #47](https://github.com/RennaN-C/contas-em-dia/pull/47); consultar resultado do commit atual na aba Checks, separado dos resultados locais |
 | Discord real | **Pendente**: proprietário precisa criar a nova aplicação e configurar credenciais/servidor/endpoint |
 
 Discord automatizado usa chaves Ed25519 geradas durante testes e respostas externas simuladas. Cobre assinatura/bytes/replay, PING, identidade, opt-in/código expirado/reutilizado, privacidade A/B, comandos/botões, interação duplicada, mensagens antes do vínculo, falhas 401/403/429/500, backoff, concorrência e recuperação/resultado incerto. Nenhum desses testes é apresentado como prova de envio real ao Discord.
@@ -76,4 +77,6 @@ Passos exatos para criar/convidar o novo bot, configurar `.env`, verificar ident
 
 Pendências externas não disfarçadas como concluídas: criação da aplicação no Developer Portal; token/Public Key/Application ID/Guild ID; registro real dos comandos e bot no servidor; URL de túnel e PING aceito pelo Portal; DM e confirmação com conta de teste autorizada; aprovação acadêmica da escolha de plataforma; mapeamento de tags por aula; conta/região/custos/domínio/DNS/TLS/banco gerenciado e deploy Azure. Nenhuma credencial real foi usada nos testes.
 
-PR e resultado da CI: a preencher com links reais após publicação da branch para revisão. Sem merge automático.
+PR aberta para revisão: [#47 — integração Discord](https://github.com/RennaN-C/contas-em-dia/pull/47), com base main. [Histórico de execuções da CI nesta branch](https://github.com/RennaN-C/contas-em-dia/actions?query=branch%3Afeat%2Fintegrador-discord). O resultado remoto depende da execução do commit corrente; não confundir com a execução local. As issues #39–#46 foram atualizadas para Discord/Azure e continuam abertas para revisão das evidências e pendências. Sem merge automático.
+
+Capturas do Chrome com conta sintética e API real do Compose isolado: [desktop](../qa/discord-profile-desktop.png) e [mobile](../qa/discord-profile-mobile.png). O script reproduzível `backend/tests/discord-profile-smoke.mjs` usa Chrome/CDP em localhost:9339 e `SALDO_SMOKE_URL=http://127.0.0.1:5574`; não exige biblioteca de navegador no projeto. Essas imagens comprovam a interface sem credenciais, não DM/convite real. Os testes de interface cobrem os estados pendente, conectado, desconectado e falhas com backend simulado.
