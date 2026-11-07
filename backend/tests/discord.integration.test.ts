@@ -141,6 +141,8 @@ describe.skipIf(process.env.RUN_DATABASE_TESTS !== '1')('Discord com PostgreSQL 
     expect((await prisma.mensagem.findUniqueOrThrow({ where: { id: message.id } })).estado).toBe('falha');
     expect((await prisma.canalUsuario.findUniqueOrThrow({ where: { usuarioId: owner } })).ativo).toBe(false);
     const r = await request(app).get('/api/integrations/discord').set(auth); expect(r.body.erro).toContain('DM');
+    await connect(); await queued(); await processDiscordOutbox();
+    expect((await request(app).get('/api/integrations/discord').set(auth)).body.erro).toBeNull();
   });
   it('401 não repete indefinidamente e limita envios seguintes', async () => {
     await connect(); const message = await queued(); vi.mocked(discordClient.sendDM).mockRejectedValueOnce(new DiscordError(401)); await processDiscordOutbox();

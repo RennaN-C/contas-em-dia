@@ -7,8 +7,9 @@ import { discordConfig } from '../../integrations/discord/config.js';
 
 export async function connectionStatus(usuarioId: string) {
   const channel = await prisma.canalUsuario.findUnique({ where: { usuarioId } });
-  const lastFailure = await prisma.mensagem.findFirst({ where: { usuarioId, plataforma: 'DISCORD', estado: 'falha', codigoErro: { notIn: ['REVOGADO', 'SEM_VINCULO'] } }, orderBy: { criadoEm: 'desc' }, select: { descricaoErro: true } });
-  return { configured: discordConfig().enabled, ativo: channel?.ativo ?? false, pendente: !!channel?.codigoConvite && !!channel.expiraEm && channel.expiraEm > new Date(), expiraEm: channel?.expiraEm ?? null, erro: channel?.erro ?? lastFailure?.descricaoErro ?? null };
+  const latest = await prisma.mensagem.findFirst({ where: { usuarioId, plataforma: 'DISCORD', tipo: 'DISCORD', direcao: 'saida' }, orderBy: [{ criadoEm: 'desc' }, { id: 'desc' }], select: { estado: true, codigoErro: true, descricaoErro: true } });
+  const failure = latest?.estado === 'falha' && !['REVOGADO', 'SEM_VINCULO'].includes(latest.codigoErro ?? '') ? latest.descricaoErro : null;
+  return { configured: discordConfig().enabled, ativo: channel?.ativo ?? false, pendente: !!channel?.codigoConvite && !!channel.expiraEm && channel.expiraEm > new Date(), expiraEm: channel?.expiraEm ?? null, erro: channel?.erro ?? failure };
 }
 export async function invite(usuarioId: string) {
   if (!discordConfig().enabled) throw new AccountError('Discord não configurado', 503);

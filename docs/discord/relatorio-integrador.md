@@ -39,7 +39,7 @@ Baseline inicial: backend 209 aprovados / 54 integrações ignoradas, frontend 1
 | Compose smoke isolado | Cadastro, login, conta e pagamento idempotente via Nginx → API → PostgreSQL aprovados; sessão/chave/valores/histórico preservados após restart e recriação |
 | Monitoramento local | Perfil iniciado no projeto isolado; Prometheus alvo UP / consulta up=1, Grafana 12.3.0 database=ok e dashboard Saldo+ provisionado com sete painéis |
 | Chrome desktop/mobile | Perfil autenticado com conta sintética, estado Discord desabilitado e layout sem overflow; capturas abaixo |
-| CI GitHub | Pipeline disparado pela [PR #47](https://github.com/RennaN-C/contas-em-dia/pull/47); consultar resultado do commit atual na aba Checks, separado dos resultados locais |
+| CI GitHub | [Execução #17 aprovada](https://github.com/RennaN-C/contas-em-dia/actions/runs/42317439217), com backend, frontend e Docker smoke; revisões posteriores são conferidas na aba Checks da [PR #47](https://github.com/RennaN-C/contas-em-dia/pull/47) |
 | Discord real | **Pendente**: proprietário precisa criar a nova aplicação e configurar credenciais/servidor/endpoint |
 
 Discord automatizado usa chaves Ed25519 geradas durante testes e respostas externas simuladas. Cobre assinatura/bytes/replay, PING, identidade, opt-in/código expirado/reutilizado, privacidade A/B, comandos/botões, interação duplicada, mensagens antes do vínculo, falhas 401/403/429/500, backoff, concorrência e recuperação/resultado incerto. Nenhum desses testes é apresentado como prova de envio real ao Discord.
