@@ -32,7 +32,7 @@ export class DiscordClient {
     const channel = z.object({ id: snowflake }).parse(dm.json);
     // Compact UUID is 22 chars: Discord nonce accepts at most 25.
     const nonce = Buffer.from(id.replaceAll('-', ''), 'hex').toString('base64url');
-    const sent = await this.request(`/channels/${channel.id}/messages`, 'POST', { content: content.slice(0, 1900), nonce, enforce_nonce: true, allowed_mentions: { parse: [] }, components: [{ type: 1, components: [{ type: 2, style: 1, label: 'Confirmar recebimento', custom_id: `confirmar:${id}` }] }] });
+    const sent = await this.request(`/channels/${channel.id}/messages`, 'POST', { content: content.slice(0, 1900), nonce, enforce_nonce: true, allowed_mentions: { parse: [] }, components: [{ type: 1, components: [{ type: 2, style: 3, label: 'Confirmar recebimento', custom_id: `confirmar:${id}` }] }] });
     return { id: z.object({ id: snowflake }).parse(sent.json).id, wait: Math.max(dm.wait, sent.wait) };
   }
   async editResponse(token: string, body: unknown) {

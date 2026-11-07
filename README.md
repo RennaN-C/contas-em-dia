@@ -6,12 +6,13 @@ Sistema de finanças pessoais para cadastro de contas recorrentes e avulsas, con
 
 ## Projeto Integrador — Discord
 
-Tema 17: integração preparada para um **novo SaldoPlusBot exclusivo**, sem reutilizar ou modificar o bot da aula. O financeiro continua funcionando com `DISCORD_ENABLED=false`. Não houve criação de aplicação Discord nem deploy nesta implementação.
+Tema 17: integração com um **novo SaldoPlusBot exclusivo**, sem reutilizar ou modificar o bot da aula. O financeiro continua funcionando com `DISCORD_ENABLED=false`. O proprietário criou a aplicação, e a conexão local, os comandos, o vínculo, a DM e o botão foram validados. Não houve deploy em nuvem.
 
 - [Criar/configurar o novo bot, registrar comandos, vínculo no Perfil e túnel HTTPS](docs/discord/README.md).
 - [Modelagem, migrations aditivas e preservação de dados](docs/discord/modelagem.md).
 - [Relatório acadêmico, testes e pendências de validação real](docs/discord/relatorio-integrador.md).
 - [Prometheus/Grafana opcionais](docs/monitoring/README.md).
+- [Operação local do bot e notificações reais](docs/discord/operacao-local.md).
 - [Preparação para Microsoft Azure, sem provisionamento](docs/azure/README.md).
 
 Comandos privados: `/vincular`, `/status`, `/proximas-contas`, `/desvincular`. Recebimento assinado: `POST /api/webhook/discord`. No backend, `npm run discord:check` valida a nova aplicação e `npm run discord:commands` registra os comandos no servidor de testes após configurar o `.env`. Tokens nunca passam ao frontend.

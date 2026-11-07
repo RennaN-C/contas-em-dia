@@ -18,7 +18,9 @@
     "lint": "eslint .",
     "discord:check": "tsx src/integrations/discord/manage.ts check",
     "discord:commands": "tsx src/integrations/discord/manage.ts register",
-    "test:migrations": "node tests/migrations.mjs"
+    "test:migrations": "node tests/migrations.mjs",
+    "discord:endpoint": "tsx src/integrations/discord/manage.ts endpoint",
+    "discord:local": "tsx src/integrations/discord/local.ts"
   },
   "overrides": {
     "deepmerge-ts": "^8.0.2",

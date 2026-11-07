@@ -206,4 +206,26 @@ describe.skipIf(process.env.RUN_DATABASE_TESTS !== '1')('Discord com PostgreSQL 
     const r = await request(app).get('/internal/metrics').set('Authorization', 'Bearer segredo-apenas-teste-metricas');
     expect(r.status).toBe(200); expect(r.text).toContain('saldo_discord_messages'); expect(r.text).not.toContain(owner); expect(r.text).not.toContain('Internet pessoal');
   });
+  it('envia aviso atual criado antes do vínculo com valor atualizado, sem repetir nem enviar histórico', async () => {
+    const lateOwner = randomUUID();
+    await prisma.usuario.create({ data: { id: lateOwner, nome: 'Vínculo posterior', email: `${lateOwner}@invalid.example`, senhaHash: 'sem-login' } });
+    try {
+      const day = businessDay();
+      const account = await prisma.conta.create({ data: { usuarioId: lateOwner, descricao: 'Aviso atual', valor: 100, vencimento: addDays(day, 3) } });
+      await processNotifications(day, lateOwner);
+      expect(await prisma.mensagem.count({ where: { usuarioId: lateOwner, plataforma: 'DISCORD' } })).toBe(0);
+      await prisma.pagamento.create({ data: { contaId: account.id, valor: 40, pagoEm: new Date() } });
+      const code = await invite(lateOwner);
+      await command('vincular', [{ name: 'codigo', type: 3, value: code.codigo }], '888888888888888888');
+      await processNotifications(day, lateOwner); await processNotifications(day, lateOwner);
+      const outgoing = await prisma.mensagem.findMany({ where: { usuarioId: lateOwner, tipo: 'DISCORD' } });
+      expect(outgoing).toHaveLength(1); expect(outgoing[0]!.conteudo).toContain('60,00');
+      const past = addDays(day, -10);
+      await prisma.conta.create({ data: { usuarioId: lateOwner, descricao: 'Histórico antigo', valor: 50, vencimento: addDays(past, 1) } });
+      await processNotifications(past, lateOwner);
+      expect(await prisma.mensagem.count({ where: { usuarioId: lateOwner, tipo: 'DISCORD' } })).toBe(1);
+      await processWeeklySummaries(day, lateOwner); await processWeeklySummaries(day, lateOwner);
+      expect(await prisma.mensagem.count({ where: { usuarioId: lateOwner, tipo: 'DISCORD', titulo: 'Resumo semanal' } })).toBe(1);
+    } finally { await prisma.usuario.delete({ where: { id: lateOwner } }); }
+  });
 });

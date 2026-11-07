@@ -10,6 +10,7 @@ import { retryDelay } from '../src/jobs/discord.js';
 import { discordClient } from '../src/integrations/discord/client.js';
 import { registerCommands } from '../src/integrations/discord/commands.js';
 import { prisma } from '../src/lib/prisma.js';
+import { configureDiscordEndpoint } from '../src/integrations/discord/setup.js';
 
 const keys = generateKeyPairSync('ed25519');
 const publicKey = keys.publicKey.export({ format: 'der', type: 'spki' }).subarray(-32).toString('hex');
@@ -100,4 +101,15 @@ it('falha de persistência não confirma tarefa perdida e responde rapidamente',
 it('não aceita ator bot nem identidade contraditória em interação assinada', async () => {
   const raw = JSON.stringify({ id: '999999999999999999', application_id: appId, type: 2, token: 'fake-token', user: { id: '111111111111111111', bot: true }, data: { name: 'status' } });
   expect((await request(app).post('/api/webhook/discord').set('Content-Type', 'application/json').set(signed(raw)).send(raw)).status).toBe(400);
+});
+it('configura endpoint HTTPS somente depois de validar a aplicação e confirma a alteração', async () => {
+  const endpoint = 'https://exemplo.trycloudflare.com/api/webhook/discord';
+  const identity = vi.spyOn(discordClient, 'identity').mockResolvedValueOnce({ configured: true, transport: 'HTTP', endpoint: null }).mockResolvedValueOnce({ configured: true, transport: 'HTTP', endpoint });
+  const request = vi.spyOn(discordClient, 'request').mockResolvedValue({ json: {}, wait: 0 });
+  expect((await configureDiscordEndpoint(endpoint)).endpoint).toBe(endpoint);
+  expect(identity).toHaveBeenCalledTimes(2); expect(request).toHaveBeenCalledWith('/applications/@me', 'PATCH', { interactions_endpoint_url: endpoint });
+});
+it.each(['http://inseguro.example/api/webhook/discord', 'https://usuario:senha@exemplo.org/api/webhook/discord', 'https://exemplo.org/outra-rota'])('não cadastra URL insegura ou incorreta: %s', async endpoint => {
+  const request = vi.spyOn(discordClient, 'request');
+  await expect(configureDiscordEndpoint(endpoint)).rejects.toThrow(); expect(request).not.toHaveBeenCalled();
 });

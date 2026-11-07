@@ -1,6 +1,6 @@
 # Relatório do Projeto Integrador — Saldo+
 
-Tema 17 — ContasEmDia/Saldo+, finanças pessoais. Referência lida: `Temas-Projeto-Integrador-APIs (2).docx`, entregue no workspace, incluindo requisitos comuns e Anexos A/B. Decisão final: **novo bot exclusivo SaldoPlusBot**, sem alterar o bot da aula. Discord HTTP foi escolhido; Azure será usado em etapa futura. Não houve criação de aplicação, deploy, provisionamento, merge ou release.
+Tema 17 — ContasEmDia/Saldo+, finanças pessoais. Referência lida: `Temas-Projeto-Integrador-APIs (2).docx`, incluindo requisitos comuns e Anexos A/B. Decisão final: **novo bot exclusivo SaldoPlusBot**, sem alterar o bot da aula. O usuário criou a nova aplicação; autenticação, registro de comandos, webhook HTTPS, vínculo, DM e botão foram validados no ambiente local. Azure será usado em etapa futura. Não houve deploy, provisionamento pago, merge ou release.
 
 ## Base preservada
 
@@ -16,7 +16,7 @@ Baseline inicial: backend 209 aprovados / 54 integrações ignoradas, frontend 1
 |---|---|
 | Schema | `backend/prisma/schema.prisma`, três migrations Discord descritas no guia de modelagem |
 | REST/ambiente | `backend/src/app.ts`, `config/env.ts`, `routes/index.ts`, `.env.example` |
-| Cliente e segurança | `backend/src/integrations/discord/{client,config,crypto,interactions,commands,manage}.ts` |
+| Cliente e segurança | `backend/src/integrations/discord/{client,config,crypto,interactions,commands,manage,setup,local}.ts` |
 | Serviços | `backend/src/modules/messages/discord-*.ts`, `messages.service.ts`; aproveita os jobs/regras existentes |
 | Worker | `backend/src/jobs/discord.ts`, `schedules.ts`; inbox/outbox PostgreSQL, DM, respostas privadas e confirmação |
 | Frontend | `frontend/src/features/messages/DiscordConnection.tsx`, `pages/ProfilePage.tsx` |
@@ -31,7 +31,7 @@ Baseline inicial: backend 209 aprovados / 54 integrações ignoradas, frontend 1
 
 | Validação | Resultado local |
 |---|---|
-| Backend completo com PostgreSQL real | **306 aprovados**, 32 arquivos, nenhuma integração ignorada na execução com RUN_DATABASE_TESTS=1 |
+| Backend completo com PostgreSQL real | **315 aprovados**, 33 arquivos, nenhuma integração ignorada na execução com RUN_DATABASE_TESTS=1 |
 | Frontend completo | **129 aprovados**, 19 arquivos |
 | Lint e builds TypeScript/Vite | Aprovados em ambos projetos |
 | npm audit | Zero vulnerabilidades nos dois lockfiles |
@@ -40,9 +40,9 @@ Baseline inicial: backend 209 aprovados / 54 integrações ignoradas, frontend 1
 | Monitoramento local | Perfil iniciado no projeto isolado; Prometheus alvo UP / consulta up=1, Grafana 12.3.0 database=ok e dashboard Saldo+ provisionado com sete painéis |
 | Chrome desktop/mobile | Perfil autenticado com conta sintética, estado Discord desabilitado e layout sem overflow; capturas abaixo |
 | CI GitHub | [Execução #17 aprovada](https://github.com/RennaN-C/contas-em-dia/actions/runs/42317439217), com backend, frontend e Docker smoke; revisões posteriores são conferidas na aba Checks da [PR #47](https://github.com/RennaN-C/contas-em-dia/pull/47) |
-| Discord real | **Pendente**: proprietário precisa criar a nova aplicação e configurar credenciais/servidor/endpoint |
+| Discord real | Nova aplicação autenticada; bot instalado; quatro comandos registrados; endpoint HTTPS aceito; vínculo, DM autorizada, botão, resumo semanal e aviso D−3 da conta criada para apresentação validados |
 
-Discord automatizado usa chaves Ed25519 geradas durante testes e respostas externas simuladas. Cobre assinatura/bytes/replay, PING, identidade, opt-in/código expirado/reutilizado, privacidade A/B, comandos/botões, interação duplicada, mensagens antes do vínculo, falhas 401/403/429/500, backoff, concorrência e recuperação/resultado incerto. Nenhum desses testes é apresentado como prova de envio real ao Discord.
+Discord automatizado usa chaves Ed25519 geradas durante testes e respostas externas simuladas. Cobre assinatura/bytes/replay, PING, identidade, opt-in/código expirado/reutilizado, privacidade A/B, comandos/botões, interação duplicada, mensagens antes do vínculo, falhas 401/403/429/500, backoff, concorrência e recuperação/resultado incerto. Também cobre registro seguro de endpoint e envio de aviso atual após vínculo posterior, com pagamento parcial atualizado e histórico antigo excluído. A validação real é separada dos mocks e está registrada em [operação local](operacao-local.md), sem publicar credenciais ou dados pessoais.
 
 Os testes PostgreSQL compartilham banco com jobs que varrem todos os usuários; por isso arquivos de integração executam em sequência para impedir interferência entre fixtures. Mocks unitários foram ajustados ao retorno real `{count}` e à filtragem de plataforma. `tests/setup-env.ts` desliga Discord real do desenvolvedor antes das importações; cada teste habilita somente a configuração simulada necessária.
 
@@ -55,14 +55,14 @@ Os testes PostgreSQL compartilham banco com jobs que varrem todos os usuários; 
 | Segunda API BrasilAPI | Existente, com fallback BCB e testes mantidos |
 | A.2.1 ciclo das mensagens | Schema/status, worker e testes; enviada não significa lida; botão marca respondida |
 | A.2.2 opt-in / canais_usuario | Perfil + código seguro/expiração/hash/uso único/revogação; isolamento testado |
-| A.4.1 aplicação e autenticação | Código/guia prontos; criação e validação real da **nova aplicação** pendentes do proprietário |
-| A.4.2 DM / botão | Cliente/outbox e testes prontos; envio real ainda pendente |
-| A.4.3 Ed25519/HTTP/ACK | Implementado/testado: raw body, 401, PONG, deferred ephemeral e fila; aceite do Portal depende de túnel/credenciais |
-| A.4.4 comandos | Quatro comandos e script reproduzível prontos; registro real depende do servidor da nova aplicação |
+| A.4.1 aplicação e autenticação | SaldoPlusBot criado pelo usuário e validado na API; ID/Public Key conferem, servidor acessível |
+| A.4.2 DM / botão | DM real autorizada enviada com ID externo; botão real persistiu respondida/data de resposta |
+| A.4.3 Ed25519/HTTP/ACK | Raw body, 401, PONG, deferred ephemeral e fila; Discord aceitou o endpoint HTTPS e interações reais foram concluídas |
+| A.4.4 comandos | Quatro comandos registrados no servidor; scripts reproduzíveis de registro e configuração local |
 | A.4.5 Gateway | Dispensado no escopo do Tema 17; sem alegação de recebimento de texto livre |
 | A.4.6 limites/falhas | Timeout, retry_after, pausas persistentes, backoff, falhas auditadas e proteção de DM |
 | A.5 migrations / persistência | Três migrations aditivas; nomes acadêmicos mapeados, UUIDs e histórico preservados; teste vazio/populado |
-| A.6 túnel | Roteiro de desenvolvimento pronto; URL real não aberta sem nova aplicação |
+| A.6 túnel | Quick Tunnel ativo no perfil Docker discord; comando discord:local registra a URL novamente após recriação |
 | A.7 segurança | Assinaturas, JWT/isolamento, códigos hash, tokens cifrados/fora do Git, auditoria sanitizada; testes automáticos |
 | CI lint/testes a partir do encontro 11 | Workflow ampliado; resultado remoto separado das evidências locais |
 | Compose e segundo bimestre | Compose padrão preservado; Prometheus/Grafana opcionais e dashboard provisionado |
@@ -75,7 +75,7 @@ Os testes PostgreSQL compartilham banco com jobs que varrem todos os usuários; 
 
 Passos exatos para criar/convidar o novo bot, configurar `.env`, verificar identidade, registrar comandos, validar PING local por HTTPS, vincular e demonstrar DM/botão: [guia Discord](README.md). Modelagem/rollback: [modelagem](modelagem.md). Métricas: [monitoramento](../monitoring/README.md). Publicação/cotação futura: [Azure](../azure/README.md).
 
-Pendências externas não disfarçadas como concluídas: criação da aplicação no Developer Portal; token/Public Key/Application ID/Guild ID; registro real dos comandos e bot no servidor; URL de túnel e PING aceito pelo Portal; DM e confirmação com conta de teste autorizada; aprovação acadêmica da escolha de plataforma; mapeamento de tags por aula; conta/região/custos/domínio/DNS/TLS/banco gerenciado e deploy Azure. Nenhuma credencial real foi usada nos testes.
+Pendências externas: aprovação acadêmica da escolha de plataforma, mapeamento de tags por aula e conta/região/custos/domínio/DNS/TLS/banco gerenciado/deploy Azure. A conexão Discord local foi validada com a participação do usuário. Testes automatizados continuam sem credenciais reais; somente a configuração e a demonstração manual autorizadas usaram o `.env` local, fora do Git. O túnel temporário não substitui a publicação final.
 
 PR aberta para revisão: [#47 — integração Discord](https://github.com/RennaN-C/contas-em-dia/pull/47), com base main. [Histórico de execuções da CI nesta branch](https://github.com/RennaN-C/contas-em-dia/actions?query=branch%3Afeat%2Fintegrador-discord). O resultado remoto depende da execução do commit corrente; não confundir com a execução local. As issues #39–#46 foram atualizadas para Discord/Azure e continuam abertas para revisão das evidências e pendências. Sem merge automático.
 

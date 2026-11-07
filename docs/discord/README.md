@@ -14,7 +14,7 @@ Decisão atual da equipe: **criar uma nova aplicação `SaldoPlusBot`**. O bot u
 8. Permitir mensagens diretas dos membros do servidor no perfil do usuário que participará da demonstração. O bot não usa canais públicos como fallback.
 9. Configurar a URL de interações somente depois de iniciar API e túnel HTTPS, conforme abaixo.
 
-Nenhuma aplicação foi registrada automaticamente por esta implementação. Sem sessão autorizada no Developer Portal, os passos acima pertencem ao proprietário. Não usar o token da aplicação antiga.
+Os passos de criação pertencem ao proprietário. Neste ambiente o usuário criou o novo SaldoPlusBot; sua identidade e presença no servidor foram verificadas pela API oficial. Não usar o token da aplicação antiga.
 
 ## Ambiente e validação
 
@@ -41,6 +41,16 @@ npm run discord:commands
 O primeiro verifica autenticação em `/users/@me`, identidade da aplicação e Public Key em `/oauth2/applications/@me`. O segundo registra os quatro comandos no servidor indicado. Ambos dependem de credenciais reais. Para registro global futuro: `npm run discord:commands -- --global`. O script faz upsert individual por nome, preservando outros comandos, e não cria aplicação. Não executá-lo com as credenciais do bot antigo.
 
 ## Webhook local por HTTPS
+
+O ambiente atual usa o perfil Docker `discord`, com Cloudflare Quick Tunnel. Depois de preencher o `.env`, execute no backend:
+
+```powershell
+npm run discord:local
+```
+
+Esse comando valida a aplicação, inicia a stack e o túnel, registra os comandos e atualiza o endpoint por `PATCH /applications/@me`. O Discord faz a validação real do PING antes de aceitar a URL. Não cria aplicação nem envia mensagens de demonstração. Para atualizar uma URL HTTPS específica: `npm run discord:endpoint -- https://SEU-TUNEL/api/webhook/discord`.
+
+O túnel é temporário: mantenha Docker/túnel ativos. Após recriar o túnel, rode `npm run discord:local` novamente para registrar a URL nova. O sistema financeiro continua acessível em http://localhost:5174. Abaixo está a alternativa manual:
 
 1. Iniciar `docker compose up -d --build --wait` ou o backend local, garantindo migrations atualizadas.
 2. Executar `cloudflared tunnel --url http://localhost:3000` ou `ngrok http 3000` em terminal próprio. Esses programas são pré-requisitos externos, não instalados pelo projeto. Não publicar métricas/Grafana pelo túnel.
@@ -71,7 +81,7 @@ Fechar DMs/bloquear o bot deve produzir falha 403, inativar o vínculo e apresen
 
 ## Confiabilidade e privacidade
 
-Outbox é gravada na mesma transação do aviso interno, sem requisição Discord nessa transação financeira. A chave externa deriva da chave do aviso/resumo; reexecutar jobs não duplica envios nem registros financeiros. Só mensagens criadas durante um vínculo ativo são enfileiradas; conectar depois não envia todo o histórico.
+Outbox é gravada na mesma transação do aviso interno, sem requisição Discord nessa transação financeira. A chave externa deriva da chave do aviso/resumo; reexecutar jobs não duplica envios nem registros financeiros. Se o usuário vincular depois que o aviso atual foi gerado internamente, a próxima execução pode enfileirar esse evento com o valor restante atualizado. A recuperação de datas anteriores fica somente no histórico interno: conectar não dispara todo o histórico antigo.
 
 O worker valida a aplicação, abre/reutiliza DM e envia conteúdo sem menções. Persistência de pausas respeita `retry_after`, cabeçalhos de limite e backoff; no máximo cinco tentativas por tarefa. 403 inativa vínculo; 401 gera pausa longa para revisão. Erros armazenados são descrições seguras, sem refletir respostas externas que possam conter dados sensíveis.
 

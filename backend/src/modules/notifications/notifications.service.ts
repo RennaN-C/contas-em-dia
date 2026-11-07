@@ -4,6 +4,7 @@ import { accountStatus, cents } from '../accounts/accounts.service.js';
 import { persistMessage } from '../messages/messages.service.js';
 import { transaction } from '../../jobs/transaction.js';
 import { addDays, utcDay, businessDay } from './dates.js';
+import { formatDueReminder } from '../../integrations/discord/messages.js';
 
 export const ALERT_RULES = [{ days: 3, tipo: 'TRES_DIAS' }, { days: 1, tipo: 'VESPERA' }, { days: 0, tipo: 'VENCIMENTO' }] as const;
 
@@ -22,7 +23,7 @@ export async function processNotifications(now = businessDay(), usuarioId?: stri
         await tx.aviso.createMany({ data: { id: randomUUID(), contaId: c.id, diasAntes: rule.days, tipo: rule.tipo, agendadoPara: day }, skipDuplicates: true });
         const aviso = await tx.aviso.findUniqueOrThrow({ where: { contaId_tipo_agendadoPara: { contaId: c.id, tipo: rule.tipo, agendadoPara: day } } });
         const balance = (cents(c.valor) - c.pagamentos.reduce((n, p) => n + cents(p.valor), 0)) / 100;
-        await persistMessage(tx, { usuarioId: c.usuarioId, contaId: c.id, chave: `aviso:${aviso.id}`, tipo: 'AVISO', titulo: rule.days ? `Vencimento em ${rule.days} dia(s)` : 'Vencimento hoje', conteudo: `${c.descricao}: valor restante a pagar de ${balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}, vencimento ${c.vencimento.toISOString().slice(0, 10)}.` });
+        await persistMessage(tx, { usuarioId: c.usuarioId, contaId: c.id, chave: `aviso:${aviso.id}`, tipo: 'AVISO', titulo: rule.days ? `Vencimento em ${rule.days} dia(s)` : 'Vencimento hoje', discordConteudo: formatDueReminder({ description: c.descricao, remaining: balance, due: c.vencimento, days: rule.days }), conteudo: `${c.descricao}: valor restante a pagar de ${balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}, vencimento ${c.vencimento.toISOString().slice(0, 10)}.` }, day.getTime() === businessDay().getTime() ? 'current' : 'internal');
         if (!aviso.enviadoEm) await tx.aviso.update({ where: { id: aviso.id }, data: { enviadoEm: now } });
       });
     } catch (error) { failures.push(error); }
